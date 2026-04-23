@@ -9,7 +9,8 @@ interface JWTPayload {
 
 export function getUser(): JWTPayload | null {
   if (typeof window === "undefined") return null;
-  const token = localStorage.getItem("access_token");
+  // MATCHING YOUR SCREENSHOT: Using 'access'
+  const token = localStorage.getItem("access");
   if (!token) return null;
   
   try {
@@ -22,15 +23,13 @@ export function getUser(): JWTPayload | null {
 export function isLoggedIn(): boolean {
   const user = getUser();
   if (!user) return false;
-  
-  // Add a 5-second buffer to prevent edge-case expirations mid-request
   return user.exp * 1000 > Date.now() + 5000;
 }
 
 export function logout() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
     window.location.href = "/login";
   }
 }

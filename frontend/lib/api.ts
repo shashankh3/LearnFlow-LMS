@@ -7,22 +7,15 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Request Interceptor
 api.interceptors.request.use(
   (config) => {
-    // 1. Django strict trailing slash enforcer
     if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
       config.url = `${config.url}/`;
     }
 
-    // 2. CRITICAL FIX: Handle FormData for file uploads (like course thumbnails)
-    if (config.data instanceof FormData) {
-      delete config.headers["Content-Type"];
-    }
-
-    // 3. Attach JWT token
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token");
+      // MATCHING YOUR SCREENSHOT: Using 'access' instead of 'access_token'
+      const token = window.localStorage.getItem("access");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -32,30 +25,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    
     if (error.response?.status === 401 && !original._retry && !original.url?.includes('/auth/token/refresh/')) {
       original._retry = true;
-      
-      if (typeof window !== "undefined") {
-        const refresh = localStorage.getItem("refresh_token");
-        if (refresh) {
-          try {
-            const { data } = await axios.post(`${API_URL}/auth/token/refresh/`, { refresh });
-            localStorage.setItem("access_token", data.access);
-            original.headers.Authorization = `Bearer ${data.access}`;
-            return api(original);
-          } catch (refreshError) {
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("refresh_token");
-            window.location.href = "/login";
-          }
-        } else {
-          localStorage.removeItem("access_token");
+      // MATCHING YOUR SCREENSHOT: Using 'refresh' instead of 'refresh_token'
+      const refresh = typeof window !== "undefined" ? window.localStorage.getItem("refresh") : null;
+      if (refresh) {
+        try {
+          const { data } = await axios.post(`${API_URL}/auth/token/refresh/`, { refresh });
+          window.localStorage.setItem("access", data.access);
+          original.headers.Authorization = `Bearer ${data.access}`;
+          return api(original);
+        } catch (err) {
+          window.localStorage.clear();
           window.location.href = "/login";
         }
       }
