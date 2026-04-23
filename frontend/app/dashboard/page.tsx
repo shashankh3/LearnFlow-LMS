@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { BookOpen, PlusCircle, LogOut, Search, LayoutDashboard, Settings, PlayCircle, Compass, Award } from "lucide-react";
+import { BookOpen, PlusCircle, LogOut, Search, LayoutDashboard, Compass, Award, PlayCircle } from "lucide-react";
+import toast from "react-hot-toast";
 
 const getCourseThumbnail = (url: string, title: string) => {
   if (url) {
@@ -25,19 +26,33 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const profileRes = await api.get("/auth/me/");
+        const token = localStorage.getItem("access");
+        
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        // Explicitly attaching the token to headers since api.ts is unmodified
+        const config = {
+          headers: { Authorization: `Bearer ${token}` }
+        };
+
+        const profileRes = await api.get("/auth/me/", config);
         setUser(profileRes.data);
         
-        const allCoursesRes = await api.get("/courses/");
+        const allCoursesRes = await api.get("/courses/", config);
         setExploreCourses(allCoursesRes.data);
 
         if (profileRes.data.role === "INSTRUCTOR") {
            setMyCourses(allCoursesRes.data.filter((c: any) => c.instructor_name === profileRes.data.username));
         } else {
-           const studentDashboardRes = await api.get("/student/dashboard/");
+           const studentDashboardRes = await api.get("/student/dashboard/", config);
            setMyCourses(studentDashboardRes.data);
         }
       } catch (err) {
+        console.error("Dashboard Authentication Error:", err);
+        localStorage.clear();
         router.push("/login");
       } finally {
         setLoading(false);
@@ -48,6 +63,7 @@ export default function DashboardPage() {
 
   const handleLogout = () => {
     localStorage.clear();
+    toast.success("Logged out successfully");
     router.push("/login");
   };
 
@@ -102,10 +118,12 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex">
       <aside className="w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col sticky top-0 h-screen">
-        <div className="p-6 flex items-center gap-2">
+        
+        <Link href="/" className="p-6 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
           <BookOpen className="h-7 w-7 text-indigo-600" />
           <span className="text-xl font-black text-slate-900 tracking-tighter">LEARNFLOW</span>
-        </div>
+        </Link>
+
         <nav className="flex-1 px-4 space-y-1 mt-4">
           <button onClick={() => setActiveTab("home")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === "home" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100" : "text-slate-500 hover:bg-slate-50"}`}>
             <LayoutDashboard className="h-5 w-5" /> Dashboard
@@ -132,7 +150,9 @@ export default function DashboardPage() {
               <p className="text-sm font-bold text-slate-900">{user?.username}</p>
               <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{user?.role}</p>
             </div>
-            <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black">{user?.username[0].toUpperCase()}</div>
+            <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black">
+              {user?.username ? user.username[0].toUpperCase() : "U"}
+            </div>
           </div>
         </header>
 

@@ -1,123 +1,93 @@
 "use client";
+
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
-import { BookOpen, Eye, EyeOff } from "lucide-react";
+import api from "@/lib/api";
+import { BookOpen, Eye, EyeOff, ArrowRight } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [form, setForm] = useState({ username: "", password: "" });
-  const [error, setError] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showPass, setShowPass] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
     try {
-      const { data } = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/token/`,
-        form
-      );
-      localStorage.setItem("access_token", data.access);
-      localStorage.setItem("refresh_token", data.refresh);
-      const decoded: any = jwtDecode(data.access);
-      
-      // FIXED: Case-insensitive check
-      if (decoded.role?.toUpperCase() === "INSTRUCTOR") {
-        router.push("/instructor/dashboard");
-      } else {
-        router.push("/dashboard");
-      }
-    } catch {
-      setError("Invalid username or password. Please try again.");
+      const res = await api.post("/auth/token/", { username, password });
+      localStorage.setItem("access", res.data.access);
+      localStorage.setItem("refresh", res.data.refresh);
+      toast.success("Welcome back to LearnFlow!");
+      window.location.href = "/dashboard";
+    } catch (err) {
+      toast.error("Invalid username or password. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4">
-      {/* Background orbs */}
-      <div className="absolute top-20 left-[10%] w-64 h-64 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float-slow" />
-      <div className="absolute bottom-20 right-[10%] w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float-medium" />
+    <div className="min-h-screen bg-[#F8F9FB] flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
+        
+        <Link href="/" className="flex items-center justify-center gap-2 mb-8 cursor-pointer hover:opacity-80 transition-opacity">
+          <BookOpen className="h-8 w-8 text-indigo-600" />
+          <span className="text-3xl font-black text-slate-900 tracking-tighter">LearnFlow</span>
+        </Link>
 
-      <div className="relative w-full max-w-md">
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          {/* Logo */}
-          <div className="flex items-center justify-center gap-2 text-indigo-600 font-bold text-xl mb-8">
-            <BookOpen size={26} />
-            <span>LearnFlow</span>
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h1>
+          <p className="text-slate-500 text-sm">Login to continue learning</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all"
+              placeholder="Enter your username"
+              required
+            />
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-1 text-center">Welcome back</h1>
-          <p className="text-gray-400 text-sm text-center mb-6">Login to continue learning</p>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-5">
-              ⚠️ {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Username</label>
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Password</label>
+            <div className="relative">
               <input
-                type="text"
-                placeholder="Enter your username"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all"
+                placeholder="Enter your password"
                 required
-                className="w-full border border-gray-200 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition text-sm"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
             </div>
+          </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Password</label>
-              <div className="relative">
-                <input
-                  type={showPass ? "text" : "password"}
-                  placeholder="Enter your password"
-                  required
-                  className="w-full border border-gray-200 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition text-sm pr-12"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-70"
+          >
+            {loading ? "Logging in..." : "Login"} <ArrowRight className="h-4 w-4" />
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98] mt-2"
-            >
-              {loading ? "Logging in..." : "Login →"}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-gray-400 mt-6">
-            Don't have an account?{" "}
-            <Link href="/register" className="text-indigo-600 font-semibold hover:underline">
-              Register free
-            </Link>
-          </p>
-        </div>
-
-        {/* Demo hint */}
-        <div className="mt-4 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-sm text-indigo-600 text-center">
-          🔑 Admin login: <strong>admin</strong> / <strong>admin1234</strong>
-        </div>
+        <p className="text-center mt-6 text-sm text-slate-500">
+          Don't have an account? <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-700">Register free</Link>
+        </p>
       </div>
     </div>
   );
