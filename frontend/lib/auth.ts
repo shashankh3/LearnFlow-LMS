@@ -11,6 +11,7 @@ export function getUser(): JWTPayload | null {
   if (typeof window === "undefined") return null;
   const token = localStorage.getItem("access_token");
   if (!token) return null;
+  
   try {
     return jwtDecode<JWTPayload>(token);
   } catch {
@@ -21,10 +22,15 @@ export function getUser(): JWTPayload | null {
 export function isLoggedIn(): boolean {
   const user = getUser();
   if (!user) return false;
-  return user.exp * 1000 > Date.now();
+  
+  // Add a 5-second buffer to prevent edge-case expirations mid-request
+  return user.exp * 1000 > Date.now() + 5000;
 }
 
 export function logout() {
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("refresh_token");
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    window.location.href = "/login";
+  }
 }
