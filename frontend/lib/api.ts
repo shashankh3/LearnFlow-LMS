@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// CHANGE THIS NUMBER EVERY TIME YOU PUSH TO VERIFY DEPLOYMENT
-const DEBUG_VERSION = "1.0.5"; 
+// This log runs immediately when the app starts, regardless of API calls
+console.log("%c>>> API CONFIG LOADED - VERSION 1.1.0 <<<", "color: yellow; font-size: 20px; font-weight: bold;");
 
 const api = axios.create({
   baseURL: "https://shashankh3.pythonanywhere.com/api/v1",
@@ -9,34 +9,22 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  console.log(`%c[API DEBUG v${DEBUG_VERSION}] Request to: ${config.url}`, "color: cyan; font-weight: bold;");
+  console.log(`%c[Request] ${config.method?.toUpperCase()} ${config.url}`, "color: cyan;");
 
-  // 1. Django Trailing Slash Fix
   if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
     config.url += '/';
   }
 
-  // 2. Token Injection
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access");
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log("%c[API DEBUG] SUCCESS: Token attached to headers.", "color: green;");
+      console.log("%c[Auth] Token attached.", "color: green;");
     } else {
-      console.warn("%c[API DEBUG] WARNING: No 'access' key found in localStorage!", "color: orange;");
-      // Double check if it's under 'access_token' just in case
-      const backupToken = localStorage.getItem("access_token");
-      if (backupToken) {
-        config.headers.Authorization = `Bearer ${backupToken}`;
-        console.log("[API DEBUG] Used backup 'access_token' key.");
-      }
+      console.warn("%c[Auth] No token found in localStorage['access']", "color: orange;");
     }
   }
-
   return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+}, (error) => Promise.reject(error));
 
 export default api;
