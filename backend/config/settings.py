@@ -1,20 +1,20 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Load environment variables from .env file
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-your-secret-key-here'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-prod-key-fixed-123')
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# Set DEBUG to False for production
 DEBUG = False
 
-# Replace 'shashankh3' with your actual PythonAnywhere username
 ALLOWED_HOSTS = ['shashankh3.pythonanywhere.com', 'localhost', '127.0.0.1']
 
-# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'lms_core', # Ensure this matches your app folder name
+    'lms_core',
 ]
 
 MIDDLEWARE = [
@@ -58,8 +58,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
-# Using SQLite for the assignment as requested
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -67,38 +65,25 @@ DATABASES = {
     }
 }
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS Settings
 CORS_ALLOW_ALL_ORIGINS = True 
 
-# REST Framework Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -110,7 +95,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
-# Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0' # Note: PA Free tier has limitations here
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+# --- CRITICAL FIX FOR USER MODEL CLASH ---
+AUTH_USER_MODEL = 'lms_core.User'
+
+# Gemini API Integration
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
