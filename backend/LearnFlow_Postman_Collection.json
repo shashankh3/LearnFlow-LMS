@@ -1,0 +1,74 @@
+{
+	"info": {
+		"name": "LearnFlow LMS API",
+		"description": "API Documentation for the LearnFlow Learning Management System.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{base_url}}/auth/register/", "host": ["{{base_url}}"], "path": ["auth", "register", ""]},
+						"body": {"mode": "raw", "raw": "{\n    \"username\": \"student1\",\n    \"password\": \"securepass123\",\n    \"role\": \"STUDENT\"\n}"}
+					}
+				},
+				{
+					"name": "Login (Get Token)",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"url": {"raw": "{{base_url}}/auth/token/", "host": ["{{base_url}}"], "path": ["auth", "token", ""]},
+						"body": {"mode": "raw", "raw": "{\n    \"username\": \"student1\",\n    \"password\": \"securepass123\"\n}"}
+					}
+				}
+			]
+		},
+		{
+			"name": "Courses & Enrollments",
+			"item": [
+				{
+					"name": "Get All Courses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {"raw": "{{base_url}}/courses/", "host": ["{{base_url}}"], "path": ["courses", ""]}
+					}
+				},
+				{
+					"name": "Enroll in Course",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Authorization", "value": "Bearer {{access_token}}"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"url": {"raw": "{{base_url}}/enrollments/", "host": ["{{base_url}}"], "path": ["enrollments", ""]},
+						"body": {"mode": "raw", "raw": "{\n    \"course_id\": 1\n}"}
+					}
+				}
+			]
+		},
+		{
+			"name": "AI Integration",
+			"item": [
+				{
+					"name": "Generate AI Quiz",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
+						"url": {"raw": "{{base_url}}/lessons/1/generate-quiz/", "host": ["{{base_url}}"], "path": ["lessons", "1", "generate-quiz", ""]}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{"key": "base_url", "value": "http://127.0.0.1:8000/api/v1"},
+		{"key": "access_token", "value": "your_jwt_token_here"}
+	]
+}
