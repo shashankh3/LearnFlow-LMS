@@ -18,29 +18,44 @@ export default function CourseDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [courseRes, userRes, enrollRes] = await Promise.all([
-          api.get(`/courses/${slug}/`),
-          api.get("/auth/me/"),
-          api.get("/enrollments/")
-        ]);
+        // 1. Fetch public course data FIRST. This must succeed independently.
+        const courseRes = await api.get(`/courses/${slug}/`);
         setCourse(courseRes.data);
-        setUser(userRes.data);
-        const enrolledIds = enrollRes.data.map((e: any) => e.course);
-        if (enrolledIds.includes(courseRes.data.id)) setIsEnrolled(true);
+
+        // 2. Attempt to fetch protected user data. 
+        // If this fails (e.g. 401 Unauthorized), we catch it silently so the course still renders.
+        try {
+          const [userRes, enrollRes] = await Promise.all([
+            api.get("/auth/me/"),
+            api.get("/enrollments/")
+          ]);
+          setUser(userRes.data);
+          const enrolledIds = enrollRes.data.map((e: any) => e.course);
+          if (enrolledIds.includes(courseRes.data.id)) setIsEnrolled(true);
+        } catch (authErr) {
+          console.warn("User is not authenticated. Rendering as guest.");
+        }
+
       } catch (err) {
-        console.error("Error fetching data");
+        console.error("Error fetching course data:", err);
       } finally {
         setLoading(false);
       }
     };
+    
     fetchData();
   }, [slug]);
 
   const handleEnroll = async () => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    
     setActionLoading(true);
     try {
       await api.post("/enrollments/", { course: course.id, user: user.id });
-      setIsEnrolled(true); // Immediate UI Update
+      setIsEnrolled(true); 
     } catch (err: any) {
       alert(`Failed to enroll: ${err.response?.data?.error || err.message}`);
     } finally {
@@ -53,7 +68,7 @@ export default function CourseDetailPage() {
     setActionLoading(true);
     try {
       await api.delete("/enrollments/", { data: { course_id: course.id } });
-      setIsEnrolled(false); // Immediate UI Update
+      setIsEnrolled(false); 
     } catch (err) {
       alert("Failed to unenroll");
     } finally {
@@ -61,8 +76,8 @@ export default function CourseDetailPage() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (!course) return <div>Course not found</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading course details...</div>;
+  if (!course) return <div className="min-h-screen flex flex-col items-center justify-center font-bold text-slate-800 text-2xl">Course not found<Link href="/dashboard" className="text-indigo-600 text-sm mt-4 hover:underline">Return to Dashboard</Link></div>;
 
   const isInstructor = user?.username === course.instructor_name;
 
@@ -101,6 +116,12 @@ export default function CourseDetailPage() {
                 </div>
               );
             })}
+            
+            {(!course.lessons || course.lessons.length === 0) && (
+              <div className="text-slate-400 italic font-medium p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center">
+                No lessons have been added to this course yet.
+              </div>
+            )}
           </div>
         </div>
 
@@ -116,7 +137,7 @@ export default function CourseDetailPage() {
             ) : isEnrolled ? (
                <div className="space-y-4">
                  <h3 className="text-2xl font-black text-slate-900 mb-6 uppercase tracking-tighter italic">Enrolled</h3>
-                 <Link href={`/courses/${course.slug}/lessons/${course.lessons[0]?.id}`} className="block w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 transition-all shadow-lg">CONTINUE COURSE</Link>
+                 <button onClick={() => course.lessons?.length > 0 ? router.push(`/courses/${course.slug}/lessons/${course.lessons[0].id}`) : alert("No lessons available yet.")} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 transition-all shadow-lg">CONTINUE COURSE</button>
                  <button onClick={handleUnenroll} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 py-4 text-red-500 font-bold text-xs tracking-widest hover:bg-red-50 rounded-2xl transition-all"><Trash2 className="h-4 w-4" /> OPT OUT OF COURSE</button>
                </div>
             ) : (

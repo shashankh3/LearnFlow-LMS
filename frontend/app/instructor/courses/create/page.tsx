@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { ArrowLeft, Save, Plus, Trash2, Video, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function CreateCoursePage() {
   const router = useRouter();
@@ -18,12 +18,30 @@ export default function CreateCoursePage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    
     try {
       const res = await api.post("/courses/", { title, description, difficulty });
-      // Redirect to your specific lesson creation path in your screenshot tree
       router.push(`/instructor/courses/${res.data.slug}/lessons/create`);
     } catch (err: any) {
-      setError("Title already exists or server error. Try a unique title.");
+      // Defensively parse the exact error Django is returning
+      let errorMsg = "Server error. Please try again.";
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        } else if (err.response.data.detail) {
+          errorMsg = err.response.data.detail;
+        } else {
+          const keys = Object.keys(err.response.data);
+          if (keys.length > 0) {
+            // E.g., translates {"title": ["This field must be unique."]} to "title: This field must be unique."
+            const firstErrorValue = Array.isArray(err.response.data[keys[0]]) 
+              ? err.response.data[keys[0]][0] 
+              : err.response.data[keys[0]];
+            errorMsg = `${keys[0].toUpperCase()}: ${firstErrorValue}`;
+          }
+        }
+      }
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -40,7 +58,11 @@ export default function CreateCoursePage() {
           <h1 className="text-4xl font-black text-slate-900 italic tracking-tighter mb-2 uppercase">Create Course</h1>
           <p className="text-slate-500 font-medium mb-12">Step 1: Define the foundation of your curriculum.</p>
 
-          {error && <div className="mb-8 p-4 bg-red-50 border-2 border-red-100 rounded-2xl text-red-600 font-bold flex items-center gap-2"><AlertCircle /> {error}</div>}
+          {error && (
+            <div className="mb-8 p-4 bg-red-50 border-2 border-red-100 rounded-2xl text-red-600 font-bold flex items-center gap-2">
+              <AlertCircle /> {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-10">
             <div>
@@ -64,7 +86,7 @@ export default function CreateCoursePage() {
               </div>
             </div>
 
-            <button disabled={loading} className="w-full py-6 bg-slate-900 text-white rounded-3xl font-black text-lg tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-2xl">
+            <button disabled={loading} className="w-full py-6 bg-slate-900 text-white rounded-3xl font-black text-lg tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-2xl disabled:opacity-50">
               {loading ? "SAVING..." : "NEXT: ADD LESSONS & VIDEOS"}
             </button>
           </form>
