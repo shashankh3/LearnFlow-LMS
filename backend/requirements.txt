@@ -1,0 +1,17 @@
+Django>=4.2,<5.0
+djangorestframework>=3.15,<4.0
+psycopg2-binary>=2.9
+djangorestframework-simplejwt>=5.3
+drf-spectacular>=0.27
+django-cors-headers>=4.3
+python-dotenv>=1.0
+google-generativeai>=0.5
+celery>=5.3
+redis>=5.0
+django-celery-results>=2.5
+django-extensions>=3.2
+pytest>=8.0
+pytest-django>=4.8
+pytest-cov>=5.0
+factory-boy>=3.3
+faker>=24.0
