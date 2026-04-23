@@ -14,33 +14,67 @@ LearnFlow is a modern LMS built to bridge the gap between video learning and act
 
 ### 🎓 Student Experience
 - **Interactive Learning:** Enroll in courses and track personal progress with a visual dashboard.
-- **"Test Your Might" AI Gauntlet:** Generate 7-question interactive quizzes on-demand, powered by **Gemini AI**, based specifically on the current lesson's content.
+- **"Test Your Might" AI Gauntlet:** Generate interactive quizzes on-demand, powered by **Gemini AI**, based specifically on the current lesson's content.
 - **Professional Certification:** Unlock and generate high-fidelity, print-ready Certificates of Completion upon hitting 100% progress.
 
 ---
 
 ## 🛠️ Technical Stack
 
-- **Frontend:** Next.js 14, Tailwind CSS, Lucide Icons, Axios.
-- **Backend:** Django, Django REST Framework (DRF), SimpleJWT (Auth).
-- **AI Integration:** Google Generative AI (Gemini-1.5-Flash).
+- **Frontend:** Next.js 14, Tailwind CSS, Lucide Icons, Axios, React Hot Toast.
+- **Backend:** Django, Django REST Framework (DRF), SimpleJWT (Auth), Celery.
+- **AI Integration:** Google Generative AI (Gemini).
 - **Database:** SQLite (Development).
 
 ---
 
-## 🚀 Getting Started
+## 🔑 Portfolio Demo Access
+Use these credentials to bypass registration and test the application immediately:
+- **Instructor Account:** `admin` / `admin1234`
+- **Student Account:** `student1` / `student123`
 
-### Backend Setup
-1. Navigate to `/backend`.
-2. Activate virtual environment: `.venv\Scripts\activate`.
-3. Install dependencies: `pip install -r requirements.txt`. (Note: ensure `google-generativeai` and `django-cors-headers` are installed).
-4. Run migrations: `python manage.py migrate`.
-5. Start server: `python manage.py runserver`.
+---
 
-### Frontend Setup
-1. Navigate to `/frontend`.
-2. Install dependencies: `npm install`.
-3. Start development server: `npm run dev`.
+## 🚀 Getting Started (Local Development)
+
+### 1. Clone the Repository
+```bash
+git clone [https://github.com/shashankh3/LearnFlow-LMS.git](https://github.com/shashankh3/LearnFlow-LMS.git)
+cd LearnFlow-LMS
+```
+
+### 2. Backend Setup & Server
+Open your terminal and run the following commands sequentially to configure the database and start the Django server:
+```bash
+cd backend
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+### 3. Background Tasks (Celery Worker)
+To process the AI quiz generation, open a **new** terminal window, activate the environment, and start the Celery worker:
+```bash
+cd backend
+.\.venv\Scripts\activate
+celery -A config worker -l info --pool=solo
+```
+
+### 4. Frontend Setup
+Open a **third** terminal window and run the following commands to install dependencies and start the Next.js interface:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 📚 API Documentation
+This repository includes a fully configured Postman collection for backend testing.
+- Import the `LearnFlow_Postman_Collection.json` file into Postman to instantly test all endpoints, including Authentication, Course Management, and AI Integrations.
 
 ---
 
