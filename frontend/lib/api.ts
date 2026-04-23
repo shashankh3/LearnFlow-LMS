@@ -1,30 +1,42 @@
 import axios from "axios";
 
+// CHANGE THIS NUMBER EVERY TIME YOU PUSH TO VERIFY DEPLOYMENT
+const DEBUG_VERSION = "1.0.5"; 
+
 const api = axios.create({
-  // Hardcoding the URL here just to be 100% sure Vercel environment variables aren't the issue
   baseURL: "https://shashankh3.pythonanywhere.com/api/v1",
   headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use((config) => {
-  // 1. Force trailing slash
+  console.log(`%c[API DEBUG v${DEBUG_VERSION}] Request to: ${config.url}`, "color: cyan; font-weight: bold;");
+
+  // 1. Django Trailing Slash Fix
   if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
     config.url += '/';
   }
 
-  // 2. The Truth Test
+  // 2. Token Injection
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access");
-    console.log("DEBUG: Current token in storage for key 'access':", token);
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log("DEBUG: Authorization header attached successfully.");
+      console.log("%c[API DEBUG] SUCCESS: Token attached to headers.", "color: green;");
     } else {
-      console.error("DEBUG: FAILED to find token. Storage is empty or key is wrong.");
+      console.warn("%c[API DEBUG] WARNING: No 'access' key found in localStorage!", "color: orange;");
+      // Double check if it's under 'access_token' just in case
+      const backupToken = localStorage.getItem("access_token");
+      if (backupToken) {
+        config.headers.Authorization = `Bearer ${backupToken}`;
+        console.log("[API DEBUG] Used backup 'access_token' key.");
+      }
     }
   }
+
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
 
 export default api;
