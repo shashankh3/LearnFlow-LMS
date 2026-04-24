@@ -16,12 +16,17 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.post("/auth/token/", { username, password });
+      // FIXED: Endpoint changed from /auth/token/ to /auth/login/
+      const res = await api.post("/auth/login/", { username, password });
+      
       localStorage.setItem("access", res.data.access);
       localStorage.setItem("refresh", res.data.refresh);
+      
       toast.success("Welcome back to LearnFlow!");
+      // Redirect to dashboard
       window.location.href = "/dashboard";
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Login Error:", err.response?.data || err.message);
       toast.error("Invalid username or password. Please try again.");
     } finally {
       setLoading(false);
@@ -49,7 +54,7 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all text-slate-900"
               placeholder="Enter your username"
               required
             />
@@ -62,7 +67,7 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all text-slate-900"
                 placeholder="Enter your password"
                 required
               />
