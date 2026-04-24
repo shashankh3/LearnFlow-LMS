@@ -25,8 +25,10 @@ urlpatterns = [
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/me/', get_user_data, name='user_data'),
     
-    # THE FINAL FIX: Matches the exact API call from your frontend console
     path('student/dashboard/', CourseViewSet.as_view({'get': 'list'}), name='student_dashboard_api'),
+    
+    # NEW FIX: Handles the nested lesson creation URL from your frontend
+    path('courses/<slug:course_slug>/lessons/', LessonViewSet.as_view({'post': 'create'}), name='nested_lesson_create'),
     
     path('lessons/<int:lesson_id>/generate-quiz/', generate_quiz, name='generate_quiz'),
 ]

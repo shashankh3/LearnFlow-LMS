@@ -75,6 +75,15 @@ class LessonViewSet(viewsets.ModelViewSet):
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated]
 
+    # FIXED: This now grabs the course from the URL slug correctly
+    def perform_create(self, serializer):
+        course_slug = self.kwargs.get('course_slug')
+        if course_slug:
+            course = get_object_or_404(Course, slug=course_slug)
+            serializer.save(course=course)
+        else:
+            serializer.save()
+
 class EnrollmentViewSet(viewsets.ModelViewSet):
     queryset = Enrollment.objects.all()
     serializer_class = EnrollmentSerializer
