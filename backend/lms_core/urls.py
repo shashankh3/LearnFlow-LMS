@@ -23,8 +23,10 @@ urlpatterns = [
     path('auth/register/', register_user, name='register'),
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    # FIXED: Matches the Next.js frontend exact requirement
     path('auth/me/', get_user_data, name='user_data'),
+    
+    # THE FINAL FIX: Matches the exact API call from your frontend console
+    path('student/dashboard/', CourseViewSet.as_view({'get': 'list'}), name='student_dashboard_api'),
     
     path('lessons/<int:lesson_id>/generate-quiz/', generate_quiz, name='generate_quiz'),
 ]

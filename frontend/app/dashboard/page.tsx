@@ -33,7 +33,6 @@ export default function DashboardPage() {
           return;
         }
 
-        // Explicitly attaching the token to headers since api.ts is unmodified
         const config = {
           headers: { Authorization: `Bearer ${token}` }
         };
@@ -44,7 +43,8 @@ export default function DashboardPage() {
         const allCoursesRes = await api.get("/courses/", config);
         setExploreCourses(allCoursesRes.data);
 
-        if (profileRes.data.role === "INSTRUCTOR") {
+        // FIXED: Now correctly checks the boolean sent by the Django backend
+        if (profileRes.data.is_instructor) {
            setMyCourses(allCoursesRes.data.filter((c: any) => c.instructor_name === profileRes.data.username));
         } else {
            const studentDashboardRes = await api.get("/student/dashboard/", config);
@@ -83,7 +83,8 @@ export default function DashboardPage() {
           <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">{course.difficulty}</div>
           <h3 className="font-bold text-slate-900 mb-2 leading-tight">{course.title}</h3>
           
-          {isStudentView && user?.role === "STUDENT" ? (
+          {/* FIXED: Replaced role check with is_instructor check */}
+          {isStudentView && !user?.is_instructor ? (
              <div className="mt-auto pt-4 border-t border-slate-100">
                <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
                  <span>Progress</span><span>{course.percentage}%</span>
@@ -148,7 +149,10 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-bold text-slate-900">{user?.username}</p>
-              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{user?.role}</p>
+              {/* FIXED: Evaluates is_instructor to display the correct title */}
+              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+                {user?.is_instructor ? "INSTRUCTOR" : "STUDENT"}
+              </p>
             </div>
             <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black">
               {user?.username ? user.username[0].toUpperCase() : "U"}
@@ -164,7 +168,8 @@ export default function DashboardPage() {
                   <h1 className="text-3xl font-black text-slate-900 tracking-tight">Welcome, {user?.username}</h1>
                   <p className="text-slate-500 font-medium">Here’s what’s happening with your learning today.</p>
                 </div>
-                {user?.role === "INSTRUCTOR" && (
+                {/* FIXED: Correctly identifies instructor to show Create Course button */}
+                {user?.is_instructor && (
                   <div className="flex gap-3">
                     <Link href="/instructor/analytics" className="bg-white text-slate-900 border border-slate-200 px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-sm">VIEW ANALYTICS</Link>
                     <Link href="/instructor/courses/create" className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-indigo-100"><PlusCircle className="h-5 w-5" /> CREATE COURSE</Link>
@@ -172,12 +177,12 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {myCourses.map(course => renderCourseCard(course, user?.role === "STUDENT"))}
+                {myCourses.map(course => renderCourseCard(course, !user?.is_instructor))}
               </div>
               {myCourses.length === 0 && (
                 <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
                    <h3 className="text-xl font-bold text-slate-400">No active courses.</h3>
-                   {user?.role === "STUDENT" && <p className="text-slate-400 mt-2 cursor-pointer text-indigo-600" onClick={() => setActiveTab("explore")}>Click here to Explore new courses to enroll in.</p>}
+                   {!user?.is_instructor && <p className="text-slate-400 mt-2 cursor-pointer text-indigo-600" onClick={() => setActiveTab("explore")}>Click here to Explore new courses to enroll in.</p>}
                 </div>
               )}
             </div>
