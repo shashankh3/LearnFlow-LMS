@@ -32,14 +32,12 @@ def register_user(request):
         password = request.data.get('password')
         email = request.data.get('email', '')
         role = request.data.get('role', 'STUDENT').upper()
-
         user = User.objects.create_user(
             username=username, 
             password=password, 
             email=email,
             is_instructor=(role == 'INSTRUCTOR')
         )
-
         refresh = RefreshToken.for_user(user)
         return Response({
             "access": str(refresh.access_token),
@@ -54,10 +52,40 @@ def register_user(request):
 def get_user_data(request):
     return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
+# --- NEW ANALYTICS VIEW ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_instructor_analytics(request):
+    courses = Course.objects.filter(instructor=request.user)
+    data = []
+    for course in courses:
+        enrollments = Enrollment.objects.filter(course=course).select_related('user')
+        student_list = []
+        for enrollment in enrollments:
+            student_list.append({
+                "username": enrollment.user.username,
+                "enrolled_at": enrollment.enrolled_at.strftime("%Y-%m-%d"),
+                "percentage": 0 
+            })
+        data.append({
+            "id": course.id,
+            "title": course.title,
+            "difficulty": course.difficulty,
+            "total_lessons": course.lessons.count(),
+            "students": student_list
+        })
+    return Response(data, status=status.HTTP_200_OK)
+
 class CourseViewSet(viewsets.ModelViewSet):
-    queryset = Course.objects.all()
     serializer_class = CourseSerializer
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        queryset = Course.objects.all()
+        instructor_only = self.request.query_params.get('instructor')
+        if instructor_only == 'true' and self.request.user.is_authenticated:
+            return queryset.filter(instructor=self.request.user)
+        return queryset
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:

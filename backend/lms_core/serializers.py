@@ -13,7 +13,6 @@ class UserSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        # 'order' removed because it does not exist in your Model
         fields = ['id', 'course', 'title', 'content', 'video_url']
         extra_kwargs = {'course': {'required': False}}
 
@@ -23,7 +22,8 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'slug', 'description', 'instructor_name', 'difficulty', 'lessons']
+        fields = ['id', 'title', 'slug', 'description', 'instructor_name', 'difficulty', 'lessons', 'instructor']
+        extra_kwargs = {'instructor': {'read_only': True}}
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,16 +37,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email = attrs.get('email')
         username = attrs.get('username')
-
         if email and not username:
             try:
                 user = User.objects.get(email=email)
                 attrs['username'] = user.username
             except User.DoesNotExist:
-                raise serializers.ValidationError("No account found with this email.")
+                raise serializers.ValidationError("No account found.")
         elif not email and not username:
-            raise serializers.ValidationError("Username or Email is required.")
-
+            raise serializers.ValidationError("Credentials required.")
         data = super().validate(attrs)
         data['user'] = UserSerializer(self.user).data
         return data
