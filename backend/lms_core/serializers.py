@@ -11,10 +11,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'is_instructor']
 
 class LessonSerializer(serializers.ModelSerializer):
-    # We make course read_only because we provide it via the URL slug in the view
     class Meta:
         model = Lesson
-        fields = ['id', 'course', 'title', 'content', 'video_url', 'order']
+        # 'order' removed because it does not exist in your Model
+        fields = ['id', 'course', 'title', 'content', 'video_url']
         extra_kwargs = {'course': {'required': False}}
 
 class CourseSerializer(serializers.ModelSerializer):

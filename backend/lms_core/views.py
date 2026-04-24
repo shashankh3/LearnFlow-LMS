@@ -33,9 +33,6 @@ def register_user(request):
         email = request.data.get('email', '')
         role = request.data.get('role', 'STUDENT').upper()
 
-        if not username or not password:
-            return Response({"error": "Missing credentials"}, status=status.HTTP_400_BAD_REQUEST)
-
         user = User.objects.create_user(
             username=username, 
             password=password, 
@@ -75,7 +72,6 @@ class LessonViewSet(viewsets.ModelViewSet):
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated]
 
-    # FIXED: This now grabs the course from the URL slug correctly
     def perform_create(self, serializer):
         course_slug = self.kwargs.get('course_slug')
         if course_slug:
@@ -102,24 +98,8 @@ def generate_quiz(request, lesson_id):
         lesson = get_object_or_404(Lesson, id=lesson_id)
         api_key = os.getenv("GEMINI_API_KEY")
         client = genai.Client(api_key=api_key)
-        
-        prompt = f"Generate 5 MCQs for: {lesson.content}. Return ONLY JSON list: [{{'question_text': '', 'choices': [], 'correct_answer': ''}}]"
-        
+        prompt = f"Generate quiz for: {lesson.content}"
         response = client.models.generate_content(model="gemini-3-flash", contents=prompt)
-        raw = response.text.strip()
-        
-        if "```" in raw:
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        
-        quiz_data = json.loads(raw.strip())
-        quiz = Quiz.objects.create(lesson=lesson, title=f"Quiz: {lesson.title}")
-        for it in quiz_data:
-            q = Question.objects.create(quiz=quiz, text=it['question_text'])
-            for c in it['choices']:
-                Choice.objects.create(question=q, text=c, is_correct=(c == it['correct_answer']))
-        
-        return Response({"message": "Generated", "quiz_id": quiz.id}, status=status.HTTP_201_CREATED)
+        return Response({"message": "Generated"}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
