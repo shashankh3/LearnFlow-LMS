@@ -1,74 +1,394 @@
 {
-	"info": {
-		"name": "LearnFlow LMS API",
-		"description": "API Documentation for the LearnFlow Learning Management System.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"item": [
-		{
-			"name": "Authentication",
-			"item": [
-				{
-					"name": "Register User",
-					"request": {
-						"method": "POST",
-						"header": [{"key": "Content-Type", "value": "application/json"}],
-						"url": {"raw": "{{base_url}}/auth/register/", "host": ["{{base_url}}"], "path": ["auth", "register", ""]},
-						"body": {"mode": "raw", "raw": "{\n    \"username\": \"student1\",\n    \"password\": \"securepass123\",\n    \"role\": \"STUDENT\"\n}"}
-					}
-				},
-				{
-					"name": "Login (Get Token)",
-					"request": {
-						"method": "POST",
-						"header": [{"key": "Content-Type", "value": "application/json"}],
-						"url": {"raw": "{{base_url}}/auth/token/", "host": ["{{base_url}}"], "path": ["auth", "token", ""]},
-						"body": {"mode": "raw", "raw": "{\n    \"username\": \"student1\",\n    \"password\": \"securepass123\"\n}"}
-					}
-				}
-			]
-		},
-		{
-			"name": "Courses & Enrollments",
-			"item": [
-				{
-					"name": "Get All Courses",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {"raw": "{{base_url}}/courses/", "host": ["{{base_url}}"], "path": ["courses", ""]}
-					}
-				},
-				{
-					"name": "Enroll in Course",
-					"request": {
-						"method": "POST",
-						"header": [
-							{"key": "Authorization", "value": "Bearer {{access_token}}"},
-							{"key": "Content-Type", "value": "application/json"}
-						],
-						"url": {"raw": "{{base_url}}/enrollments/", "host": ["{{base_url}}"], "path": ["enrollments", ""]},
-						"body": {"mode": "raw", "raw": "{\n    \"course_id\": 1\n}"}
-					}
-				}
-			]
-		},
-		{
-			"name": "AI Integration",
-			"item": [
-				{
-					"name": "Generate AI Quiz",
-					"request": {
-						"method": "POST",
-						"header": [{"key": "Authorization", "value": "Bearer {{access_token}}"}],
-						"url": {"raw": "{{base_url}}/lessons/1/generate-quiz/", "host": ["{{base_url}}"], "path": ["lessons", "1", "generate-quiz", ""]}
-					}
-				}
-			]
-		}
-	],
-	"variable": [
-		{"key": "base_url", "value": "http://127.0.0.1:8000/api/v1"},
-		{"key": "access_token", "value": "your_jwt_token_here"}
-	]
+  "info": {
+    "name": "LearnFlow LMS API",
+    "description": "Complete API documentation for the LearnFlow Learning Management System. \n\n**Setup:**\n1. Import this collection into Postman\n2. Hit 'Login' request first\n3. Copy the 'access' token from the response\n4. Paste it into the collection variable 'access_token'\n5. All other requests will use it automatically",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://shashankh3.pythonanywhere.com/api",
+      "description": "Your PythonAnywhere backend URL"
+    },
+    {
+      "key": "access_token",
+      "value": "paste_your_jwt_token_here",
+      "description": "JWT access token from Login response"
+    },
+    {
+      "key": "course_slug",
+      "value": "harvard-cs50-2026-full-computer-science-university-course",
+      "description": "Slug of a course to test with"
+    },
+    {
+      "key": "lesson_id",
+      "value": "1",
+      "description": "ID of a lesson to test with"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register - Student",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/register/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"student1\",\n    \"email\": \"student1@example.com\",\n    \"password\": \"securepass123\",\n    \"is_instructor\": false\n}"
+            },
+            "description": "Register a new student account."
+          }
+        },
+        {
+          "name": "Register - Instructor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/register/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"instructor1\",\n    \"email\": \"instructor1@example.com\",\n    \"password\": \"securepass123\",\n    \"is_instructor\": true\n}"
+            },
+            "description": "Register a new instructor account."
+          }
+        },
+        {
+          "name": "Login (Get Token)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/token/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "token", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"student1\",\n    \"password\": \"securepass123\"\n}"
+            },
+            "description": "Login and receive JWT access + refresh tokens. Copy the 'access' value and set it as the 'access_token' collection variable."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/auth/token/refresh/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "token", "refresh", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh\": \"paste_refresh_token_here\"\n}"
+            },
+            "description": "Get a new access token using the refresh token."
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me", ""]
+            },
+            "description": "Get the currently logged-in user's profile including role (is_instructor)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Courses",
+      "item": [
+        {
+          "name": "List All Courses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/",
+              "host": ["{{base_url}}"],
+              "path": ["courses", ""]
+            },
+            "description": "Get all courses. Instructors see their own courses. Students see all."
+          }
+        },
+        {
+          "name": "Explore Courses (Unenrolled)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/explore/",
+              "host": ["{{base_url}}"],
+              "path": ["courses", "explore", ""]
+            },
+            "description": "Returns only courses the current student is NOT enrolled in."
+          }
+        },
+        {
+          "name": "Get Course Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_slug}}/",
+              "host": ["{{base_url}}"],
+              "path": ["courses", "{{course_slug}}", ""]
+            },
+            "description": "Get full course details including all lessons."
+          }
+        },
+        {
+          "name": "Create Course (Instructor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/",
+              "host": ["{{base_url}}"],
+              "path": ["courses", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Complete Python Bootcamp\",\n    \"description\": \"Learn Python from scratch to advanced.\",\n    \"difficulty\": \"Beginner\"\n}"
+            },
+            "description": "Create a new course. Must be logged in as an instructor."
+          }
+        },
+        {
+          "name": "Edit Course (Instructor)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_slug}}/",
+              "host": ["{{base_url}}"],
+              "path": ["courses", "{{course_slug}}", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"title\": \"Updated Course Title\",\n    \"description\": \"Updated description.\",\n    \"difficulty\": \"Intermediate\"\n}"
+            },
+            "description": "Update course details. Only the course creator can edit."
+          }
+        },
+        {
+          "name": "Delete Course (Instructor)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_slug}}/",
+              "host": ["{{base_url}}"],
+              "path": ["courses", "{{course_slug}}", ""]
+            },
+            "description": "Permanently delete a course. Only the course creator can delete."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Lessons",
+      "item": [
+        {
+          "name": "List All Lessons",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/lessons/",
+              "host": ["{{base_url}}"],
+              "path": ["lessons", ""]
+            },
+            "description": "Get all lessons across all courses."
+          }
+        },
+        {
+          "name": "Create Lesson (Instructor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/lessons/",
+              "host": ["{{base_url}}"],
+              "path": ["lessons", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"course\": 1,\n    \"title\": \"Introduction to Python\",\n    \"content\": \"In this lesson we cover Python basics.\",\n    \"video_url\": \"https://www.youtube.com/watch?v=rfscVS0vtbw\",\n    \"order\": 1\n}"
+            },
+            "description": "Add a new lesson to a course. Use 'course' field with the course ID."
+          }
+        },
+        {
+          "name": "Delete Lesson (Instructor)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/lessons/{{lesson_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["lessons", "{{lesson_id}}", ""]
+            },
+            "description": "Delete a specific lesson by ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Enrollments",
+      "item": [
+        {
+          "name": "Get My Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/enrollments/",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", ""]
+            },
+            "description": "Get all courses the current student is enrolled in including progress."
+          }
+        },
+        {
+          "name": "Enroll in Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/enrollments/",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"course\": 1\n}"
+            },
+            "description": "Enroll the current student in a course using the course ID. Returns existing enrollment if already enrolled."
+          }
+        },
+        {
+          "name": "Unenroll from Course",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/enrollments/1/",
+              "host": ["{{base_url}}"],
+              "path": ["enrollments", "1", ""]
+            },
+            "description": "Unenroll from a course using the enrollment ID (not course ID)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Progress Tracking",
+      "item": [
+        {
+          "name": "Toggle Lesson Complete / Incomplete",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/courses/{{course_slug}}/lessons/{{lesson_id}}/complete/",
+              "host": ["{{base_url}}"],
+              "path": ["courses", "{{course_slug}}", "lessons", "{{lesson_id}}", "complete", ""]
+            },
+            "description": "Toggle a lesson as complete or incomplete. Returns updated progress percentage and list of completed lesson IDs. Calling it twice marks then unmarks the lesson."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. AI Quiz",
+      "item": [
+        {
+          "name": "Generate AI Quiz for Lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/lessons/{{lesson_id}}/quiz/",
+              "host": ["{{base_url}}"],
+              "path": ["lessons", "{{lesson_id}}", "quiz", ""]
+            },
+            "description": "Generate 3 AI-powered multiple choice questions based on the lesson content using Google Gemini. Returns array of questions with options and correctIndex."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Instructor Analytics",
+      "item": [
+        {
+          "name": "Get Instructor Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/instructor/analytics/",
+              "host": ["{{base_url}}"],
+              "path": ["instructor", "analytics", ""]
+            },
+            "description": "Get detailed analytics for all courses by this instructor — student count, avg progress, completion rates per course."
+          }
+        }
+      ]
+    }
+  ]
 }
