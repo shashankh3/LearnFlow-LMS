@@ -16,32 +16,31 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const courseRes = await api.get(`/courses/${slug}/`);
-        setCourse(courseRes.data);
+  const fetchData = async () => {
+    try {
+      const courseRes = await api.get(`/courses/${slug}/`);
+      setCourse(courseRes.data);
 
-        try {
-          const [userRes, enrollRes] = await Promise.all([
-            api.get("/auth/me/"),
-            api.get("/enrollments/")
-          ]);
-          setUser(userRes.data);
-          
-          // Find the specific enrollment ID for this course
-          const activeEnrollment = enrollRes.data.find((e: any) => e.course === courseRes.data.id);
-          if (activeEnrollment) setEnrollmentId(activeEnrollment.id);
-          
-        } catch (authErr) {
-          console.warn("User not authenticated.");
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
+      try {
+        const [userRes, enrollRes] = await Promise.all([
+          api.get("/auth/me/"),
+          api.get("/enrollments/")
+        ]);
+        setUser(userRes.data);
+        const activeEnrollment = enrollRes.data.find((e: any) => e.course === courseRes.data.id);
+        if (activeEnrollment) setEnrollmentId(activeEnrollment.id);
+        else setEnrollmentId(null); // Explicitly clear if not found
+      } catch (authErr) {
+        console.warn("Auth failed or guest user.");
       }
-    };
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [slug]);
 
@@ -52,20 +51,21 @@ export default function CourseDetailPage() {
       const res = await api.post("/enrollments/", { course: course.id });
       setEnrollmentId(res.data.id);
       toast.success("Enrolled successfully!");
+      fetchData(); // Refresh data to unlock lessons
     } catch (err: any) {
-      toast.error("Failed to enroll");
+      console.error("Enroll error:", err.response?.data);
+      toast.error("Enrollment failed. Try refreshing.");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleUnenroll = async () => {
-    if (!confirm("Are you sure you want to opt out? Your progress will be lost.")) return;
+    if (!confirm("Opt out? Progress will be lost.")) return;
     if (!enrollmentId) return;
 
     setActionLoading(true);
     try {
-      // FIXED: Using the specific Enrollment ID for a clean REST delete
       await api.delete(`/enrollments/${enrollmentId}/`);
       setEnrollmentId(null);
       toast.success("Opted out successfully");
@@ -87,7 +87,7 @@ export default function CourseDetailPage() {
     <div className="min-h-screen bg-white">
       <div className="bg-[#4f46e5] text-white py-12 px-8">
         <div className="max-w-7xl mx-auto">
-          <Link href="/dashboard" className="inline-flex items-center text-white/70 hover:text-white font-bold text-sm mb-8 transition-colors">
+          <Link href="/dashboard" className="inline-flex items-center text-white/70 hover:text-white font-bold text-sm mb-8">
             <ArrowLeft className="h-4 w-4 mr-2" /> BACK TO DASHBOARD
           </Link>
           <br/>
@@ -125,7 +125,6 @@ export default function CourseDetailPage() {
           <div className="sticky top-24 bg-white border border-slate-200 rounded-[2rem] p-8 shadow-xl text-center">
             {isInstructor ? (
               <div className="space-y-3">
-                <div className="bg-indigo-50 h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-6"><Layout className="h-8 w-8 text-indigo-600" /></div>
                 <h3 className="text-xl font-black text-slate-900 mb-8 uppercase tracking-tighter">Instructor Tools</h3>
                 <Link href={`/instructor/courses/${course.slug}/lessons/create`} className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs tracking-widest hover:bg-indigo-700 transition-all"><PlusCircle className="h-4 w-4" /> ADD LESSONS</Link>
                 <Link href={`/instructor/courses/${course.slug}/edit`} className="w-full flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs tracking-widest hover:bg-slate-800 transition-all"><Edit3 className="h-4 w-4" /> EDIT COURSE</Link>
@@ -133,13 +132,13 @@ export default function CourseDetailPage() {
             ) : isEnrolled ? (
                <div className="space-y-4">
                  <h3 className="text-2xl font-black text-slate-900 mb-6 uppercase tracking-tighter italic">Enrolled</h3>
-                 <button onClick={() => course.lessons?.length > 0 ? router.push(`/courses/${course.slug}/lessons/${course.lessons[0].id}`) : toast.error("No lessons yet.")} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 transition-all shadow-lg">CONTINUE COURSE</button>
+                 <button onClick={() => course.lessons?.length > 0 ? router.push(`/courses/${course.slug}/lessons/${course.lessons[0].id}`) : toast.error("No lessons yet.")} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 shadow-lg">CONTINUE COURSE</button>
                  <button onClick={handleUnenroll} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 py-4 text-red-500 font-bold text-xs tracking-widest hover:bg-red-50 rounded-2xl transition-all"><Trash2 className="h-4 w-4" /> OPT OUT OF COURSE</button>
                </div>
             ) : (
                <div>
                  <h3 className="text-2xl font-black text-slate-900 mb-6 uppercase tracking-tighter italic">Enroll Now</h3>
-                 <button onClick={handleEnroll} disabled={actionLoading} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50">{actionLoading ? "ENROLLING..." : "ENROLL NOW — FREE"}</button>
+                 <button onClick={handleEnroll} disabled={actionLoading} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 shadow-lg disabled:opacity-50">{actionLoading ? "ENROLLING..." : "ENROLL NOW — FREE"}</button>
                </div>
             )}
           </div>

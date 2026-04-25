@@ -12,6 +12,7 @@ const getCourseThumbnail = (url: string, title: string) => {
     const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
     if (ytMatch && ytMatch[1]) return `https://img.youtube.com/vi/${ytMatch[1]}/maxresdefault.jpg`;
   }
+  // Better fallback with initials
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&background=4f46e5&color=fff&size=512`;
 };
 
@@ -27,26 +28,22 @@ export default function DashboardPage() {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("access");
-        if (!token) {
-          router.push("/login");
-          return;
-        }
+        if (!token) { router.push("/login"); return; }
+        const config = { headers: { Authorization: `Bearer ${token}` } };
 
-        const config = {
-          headers: { Authorization: `Bearer ${token}` }
-        };
+        const [profileRes, allCoursesRes, enrollRes] = await Promise.all([
+          api.get("/auth/me/", config),
+          api.get("/courses/", config),
+          api.get("/enrollments/", config)
+        ]);
 
-        const profileRes = await api.get("/auth/me/", config);
         setUser(profileRes.data);
-        
-        const allCoursesRes = await api.get("/courses/", config);
         setExploreCourses(allCoursesRes.data);
 
         if (profileRes.data.is_instructor) {
            setMyCourses(allCoursesRes.data.filter((c: any) => c.instructor_name === profileRes.data.username));
         } else {
-           const studentDashboardRes = await api.get("/enrollments/", config);
-           setMyCourses(studentDashboardRes.data);
+           setMyCourses(enrollRes.data);
         }
       } catch (err) {
         console.error("Dashboard Error:", err);
@@ -59,55 +56,30 @@ export default function DashboardPage() {
     fetchData();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    toast.success("Logged out successfully");
-    router.push("/login");
-  };
-
-  const handleDeleteCourse = async (courseSlug: string) => {
-    if (!confirm("Are you sure you want to delete this ENTIRE course?")) return;
-    try {
-      await api.delete(`/courses/${courseSlug}/`);
-      setMyCourses((prev) => prev.filter((c: any) => c.slug !== courseSlug));
-      setExploreCourses((prev) => prev.filter((c: any) => c.slug !== courseSlug));
-      toast.success("Course deleted!");
-    } catch (error) {
-      toast.error("Failed to delete course.");
-    }
-  };
+  const handleLogout = () => { localStorage.clear(); router.push("/login"); };
 
   const renderCourseCard = (item: any, isStudentView: boolean = false) => {
-    // If it's a student view, 'item' is an ENROLLMENT. If instructor, it's a COURSE.
     const course = isStudentView ? item.course_details : item;
-    
-    // Find a video for the thumbnail
-    const videoUrl = isStudentView 
-      ? (course?.lessons?.[0]?.video_url || "") 
-      : (course?.lessons?.[0]?.video_url || "");
-
-    // Calculate Progress
-    const totalLessons = course?.lessons?.length || 0;
-    const completedCount = isStudentView ? (item.completed_lessons?.length || 0) : 0;
-    const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
-    const isCompleted = progressPercent === 100 && totalLessons > 0;
-    
-    const isOwner = user?.is_instructor && course?.instructor_name === user?.username;
-    
     if (!course) return null;
 
+    // Grab first lesson video for thumbnail
+    const videoUrl = course.lessons?.[0]?.video_url || "";
+    
+    // Calculate Progress
+    const totalLessons = course.lessons?.length || 0;
+    const completedCount = isStudentView ? (item.completed_lessons?.length || 0) : 0;
+    const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+    
+    const isOwner = user?.is_instructor && course.instructor_name === user?.username;
+
     return (
-      <div key={item.id} className="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-2xl transition-all group flex flex-col h-full">
+      <div key={item.id} className="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all group flex flex-col h-full">
         <div className="aspect-video bg-indigo-500 relative flex items-center justify-center overflow-hidden">
-          <PlayCircle className="text-white/30 h-16 w-16 absolute z-10 group-hover:scale-110 transition-transform" />
-          <img 
-            src={getCourseThumbnail(videoUrl, course.title)} 
-            alt={course.title} 
-            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" 
-          />
+          <PlayCircle className="text-white/30 h-16 w-16 absolute z-10 group-hover:scale-110 transition-all" />
+          <img src={getCourseThumbnail(videoUrl, course.title)} alt={course.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all" />
         </div>
         <div className="p-6 flex flex-col flex-1">
-          <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">{course.difficulty || "ALL LEVELS"}</div>
+          <div className="text-[10px] font-black text-indigo-600 uppercase mb-2">{course.difficulty || "ALL LEVELS"}</div>
           <h3 className="font-bold text-slate-900 mb-2 leading-tight">{course.title}</h3>
           
           {isStudentView ? (
@@ -116,36 +88,16 @@ export default function DashboardPage() {
                  <span>Progress</span><span>{progressPercent}%</span>
                </div>
                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-4">
-                 <div className={`h-full rounded-full transition-all duration-1000 ${isCompleted ? 'bg-green-500' : 'bg-indigo-600'}`} style={{ width: `${progressPercent}%` }}></div>
+                 <div className="h-full bg-indigo-600 rounded-full transition-all" style={{ width: `${progressPercent}%` }}></div>
                </div>
-               
-               {isCompleted ? (
-                 <Link href={`/courses/${course.slug}/certificate`} className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white rounded-xl font-black text-xs tracking-widest hover:from-yellow-500 hover:to-yellow-700 transition-colors shadow-lg">
-                   <Award className="h-4 w-4" /> VIEW CERTIFICATE
-                 </Link>
-               ) : (
-                 <Link href={`/courses/${course.slug}`} className="w-full block text-center py-3 bg-slate-900 text-white rounded-xl font-bold text-xs tracking-widest hover:bg-indigo-600 transition-colors">
-                   RESUME LEARNING
-                 </Link>
-               )}
+               <Link href={`/courses/${course.slug}`} className="w-full block text-center py-3 bg-slate-900 text-white rounded-xl font-bold text-xs tracking-widest hover:bg-indigo-600">
+                 RESUME LEARNING
+               </Link>
              </div>
           ) : (
-            <>
-              <p className="text-sm text-slate-500 line-clamp-2 mb-6 flex-1">{course.description}</p>
-              <div className="flex gap-2 mt-auto">
-                <Link href={`/courses/${course.slug}`} className="flex-1 block text-center py-3 bg-slate-900 text-white rounded-xl font-bold text-xs tracking-widest hover:bg-indigo-600 transition-colors">
-                  VIEW COURSE
-                </Link>
-                {isOwner && (
-                  <button 
-                    onClick={() => handleDeleteCourse(course.slug)}
-                    className="px-4 bg-white border border-red-200 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
-            </>
+            <div className="mt-auto pt-4 border-t border-slate-100 flex gap-2">
+              <Link href={`/courses/${course.slug}`} className="flex-1 block text-center py-3 bg-slate-900 text-white rounded-xl font-bold text-xs tracking-widest hover:bg-indigo-600">VIEW COURSE</Link>
+            </div>
           )}
         </div>
       </div>
@@ -155,70 +107,17 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex">
       <aside className="w-64 bg-white border-r border-slate-200 hidden lg:flex flex-col sticky top-0 h-screen">
-        <Link href="/" className="p-6 flex items-center gap-2 cursor-pointer">
-          <BookOpen className="h-7 w-7 text-indigo-600" />
-          <span className="text-xl font-black text-slate-900 tracking-tighter">LEARNFLOW</span>
-        </Link>
-        <nav className="flex-1 px-4 space-y-1 mt-4">
-          <button onClick={() => setActiveTab("home")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === "home" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100" : "text-slate-500 hover:bg-slate-50"}`}>
-            <LayoutDashboard className="h-5 w-5" /> Dashboard
-          </button>
-          <button onClick={() => setActiveTab("explore")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === "explore" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100" : "text-slate-500 hover:bg-slate-50"}`}>
-            <Compass className="h-5 w-5" /> Explore
-          </button>
+        <Link href="/" className="p-6 flex items-center gap-2 font-black text-xl tracking-tighter text-indigo-600"><BookOpen /> LEARNFLOW</Link>
+        <nav className="flex-1 px-4 mt-4">
+          <button onClick={() => setActiveTab("home")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold ${activeTab === "home" ? "bg-indigo-600 text-white" : "text-slate-500"}`}><LayoutDashboard /> Dashboard</button>
+          <button onClick={() => setActiveTab("explore")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold ${activeTab === "explore" ? "bg-indigo-600 text-white" : "text-slate-500"}`}><Compass /> Explore</button>
         </nav>
-        <div className="p-6">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-50 transition-colors">
-            <LogOut className="h-5 w-5" /> Logout
-          </button>
-        </div>
+        <button onClick={handleLogout} className="m-6 flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-50"><LogOut /> Logout</button>
       </aside>
-
-      <main className="flex-1">
-        <header className="bg-white/80 backdrop-blur-md h-20 border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-20">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input type="text" placeholder="Search courses..." className="w-full bg-slate-100 border-none rounded-xl py-2 pl-10 pr-4 text-sm outline-none" />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-bold text-slate-900">{user?.username}</p>
-              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{user?.is_instructor ? "INSTRUCTOR" : "STUDENT"}</p>
-            </div>
-            <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black">
-              {user?.username ? user.username[0].toUpperCase() : "U"}
-            </div>
-          </div>
-        </header>
-
-        <div className="p-8 lg:p-12">
-          {activeTab === "home" && (
-            <div>
-              <div className="flex justify-between items-center mb-10">
-                <div>
-                  <h1 className="text-3xl font-black text-slate-900 tracking-tight">Welcome, {user?.username}</h1>
-                  <p className="text-slate-500 font-medium">Here’s what’s happening with your learning today.</p>
-                </div>
-                {user?.is_instructor && (
-                  <div className="flex gap-3">
-                    <Link href="/instructor/courses/create" className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-xl shadow-indigo-100"><PlusCircle className="h-5 w-5" /> CREATE COURSE</Link>
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {myCourses.map(item => renderCourseCard(item, !user?.is_instructor))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "explore" && (
-            <div className="animate-in fade-in duration-500">
-               <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-10">Explore Network</h1>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                 {exploreCourses.map(course => renderCourseCard(course, false))}
-               </div>
-            </div>
-          )}
+      <main className="flex-1 p-8">
+        <h1 className="text-3xl font-black text-slate-900 mb-10">Welcome, {user?.username}</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {(activeTab === "home" ? myCourses : exploreCourses).map(item => renderCourseCard(item, activeTab === "home" && !user?.is_instructor))}
         </div>
       </main>
     </div>
