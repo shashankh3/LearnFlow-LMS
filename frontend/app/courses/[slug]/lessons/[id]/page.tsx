@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { ArrowLeft, CheckCircle, Sparkles, Flame, RefreshCw, Trophy } from "lucide-react";
+import { ArrowLeft, CheckCircle, Flame, RefreshCw, Trophy } from "lucide-react";
 
 const getEmbedUrl = (url: string) => {
   if (!url) return "";
@@ -16,8 +16,12 @@ export default function LessonPlayerPage() {
   const { slug, id } = useParams();
   const [lesson, setLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [completed, setCompleted] = useState(false);
   
+  // Progress & Cert State
+  const [completed, setCompleted] = useState(false);
+  const [certUrl, setCertUrl] = useState<string | null>(null);
+  
+  // AI Quiz State
   const [quizLoading, setQuizLoading] = useState(false);
   const [quiz, setQuiz] = useState<any[] | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -26,31 +30,53 @@ export default function LessonPlayerPage() {
   useEffect(() => {
     const fetchLesson = async () => {
       try {
-        const res = await api.get(`/courses/${slug}/lessons/${id}/`);
+        const res = await api.get(`/lessons/${id}/`);
         setLesson(res.data);
-      } catch (err) { console.error("Error fetching lesson"); }
-      finally { setLoading(false); }
+      } catch (err) { 
+        console.error("Error fetching lesson", err); 
+      } finally { 
+        setLoading(false); 
+      }
     };
-    fetchLesson();
-  }, [slug, id]);
+    if (id) fetchLesson();
+  }, [id]);
 
-  const toggleCompletion = async () => {
+  // FIX: Calling the new Certificate-Engine endpoint
+  const markAsComplete = async () => {
     try {
-      const res = await api.post(`/lessons/${id}/toggle-progress/`);
-      setCompleted(res.data.completed);
-    } catch (err) { alert("Enrollment required."); }
+      const res = await api.post(`/courses/${slug}/lessons/${id}/complete/`);
+      setCompleted(true);
+      
+      // If the backend generated a certificate, capture it
+      if (res.data.is_completed && res.data.certificate_url) {
+        setCertUrl(res.data.certificate_url);
+        alert(`🎉 Course Completed! Certificate generated: ${res.data.certificate_url}`);
+      }
+    } catch (err: any) { 
+      alert(err.response?.data?.detail || "You must be enrolled to track progress."); 
+    }
   };
 
+  // FIX: Properly parsing Gemini's JSON response
   const generateAIQuiz = async () => {
     setQuizLoading(true); setQuiz(null); setShowResults(false); setAnswers({});
     try {
       const res = await api.post(`/lessons/${id}/generate-quiz/`);
-      setQuiz(res.data.quiz);
+      let aiText = res.data.quiz;
+      
+      // Strip markdown code blocks if Gemini includes them
+      if (aiText.includes('```')) {
+        aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      }
+      
+      const parsedQuiz = JSON.parse(aiText);
+      // Ensure it's an array
+      setQuiz(Array.isArray(parsedQuiz) ? parsedQuiz : [parsedQuiz]);
     } catch (err: any) { 
-      const errorMsg = err.response?.data?.error || err.message || "Unknown Error";
-      alert(`AI ERROR: ${errorMsg}`); 
+      alert(`AI ERROR: Failed to generate or parse quiz. Try again.`); 
+    } finally { 
+      setQuizLoading(false); 
     }
-    finally { setQuizLoading(false); }
   };
 
   const calculateScore = () => {
@@ -60,32 +86,46 @@ export default function LessonPlayerPage() {
     return score;
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // FIX: Ultimate Null-Safety Shields
+  if (loading) return <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center font-bold text-slate-500">Loading Lesson Data...</div>;
+  if (!lesson) return <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center font-bold text-red-500">Lesson not found or API error.</div>;
 
   const score = calculateScore();
 
   return (
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col">
-      <header className="bg-slate-900 text-white px-8 py-4 flex items-center justify-between sticky top-0 z-20">
+      <header className="bg-slate-900 text-white px-8 py-4 flex items-center justify-between sticky top-0 z-20 shadow-xl">
         <div className="flex items-center gap-4">
-          <Link href={`/courses/${slug}`} className="p-2 hover:bg-slate-800 rounded-full"><ArrowLeft className="h-5 w-5" /></Link>
-          <h1 className="font-bold text-lg">{lesson.title}</h1>
+          <Link href={`/courses/${slug}`} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><ArrowLeft className="h-5 w-5" /></Link>
+          <h1 className="font-bold text-lg">{lesson?.title || "Lesson"}</h1>
         </div>
-        <button onClick={toggleCompletion} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${completed ? 'bg-green-500 text-white' : 'bg-slate-800 text-slate-300'}`}>
-          <CheckCircle className="h-4 w-4" /> {completed ? "COMPLETED" : "MARK AS COMPLETE"}
-        </button>
+        
+        <div className="flex gap-4">
+          {certUrl && (
+            <a href={certUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm bg-yellow-500 text-yellow-950 hover:bg-yellow-400 transition-all">
+              <Trophy className="h-4 w-4" /> VIEW CERTIFICATE
+            </a>
+          )}
+          <button 
+            onClick={markAsComplete} 
+            disabled={completed}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${completed ? 'bg-green-500 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
+          >
+            <CheckCircle className="h-4 w-4" /> {completed ? "COMPLETED" : "MARK AS COMPLETE"}
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {lesson.video_url && (
-            <div className="aspect-video w-full bg-black rounded-3xl overflow-hidden shadow-2xl">
+          {lesson?.video_url && (
+            <div className="aspect-video w-full bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white">
               <iframe src={getEmbedUrl(lesson.video_url)} className="w-full h-full border-0" allowFullScreen></iframe>
             </div>
           )}
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-            <h2 className="text-2xl font-black text-slate-900 mb-6 italic uppercase tracking-tighter">Lesson Scroll</h2>
-            <div className="prose max-w-none text-slate-600 font-medium whitespace-pre-wrap">{lesson.content}</div>
+          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
+            <h2 className="text-2xl font-black text-slate-900 mb-6 italic uppercase tracking-tighter">Lesson Material</h2>
+            <div className="prose max-w-none text-slate-600 font-medium whitespace-pre-wrap">{lesson?.content}</div>
           </div>
         </div>
 
@@ -119,14 +159,16 @@ export default function LessonPlayerPage() {
                 <div key={idx} className="space-y-3">
                   <p className="font-bold text-slate-900 text-sm">{idx + 1}. {q.question}</p>
                   <div className="grid gap-2">
-                    {q.options.map((opt: string, oIdx: number) => {
+                    {q.options?.map((opt: string, oIdx: number) => {
                       const isSelected = answers[idx] === oIdx;
                       const isCorrect = showResults && oIdx === q.correctIndex;
                       const isWrong = showResults && isSelected && !isCorrect;
+                      
                       let style = "bg-slate-50 border-slate-100 text-slate-500";
                       if (isSelected) style = "bg-slate-900 border-slate-900 text-white";
                       if (isCorrect) style = "bg-green-500 border-green-500 text-white font-bold";
                       if (isWrong) style = "bg-red-500 border-red-500 text-white";
+                      
                       return (
                         <button key={oIdx} onClick={() => !showResults && setAnswers({...answers, [idx]: oIdx})} className={`w-full text-left p-3 rounded-xl text-xs font-bold border-2 transition-all ${style}`}>
                           {opt}
@@ -138,17 +180,22 @@ export default function LessonPlayerPage() {
               ))}
 
               {!showResults ? (
-                <button onClick={() => setShowResults(true)} disabled={Object.keys(answers).length < 7} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-xs tracking-widest disabled:opacity-30">
+                // FIX: Dynamic quiz length check instead of hardcoded 7
+                <button 
+                  onClick={() => setShowResults(true)} 
+                  disabled={Object.keys(answers).length < quiz.length} 
+                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-xs tracking-widest disabled:opacity-30 transition-all"
+                >
                   FINISH THEM
                 </button>
               ) : (
-                <div className="text-center p-6 bg-slate-900 rounded-2xl text-white">
+                <div className="text-center p-6 bg-slate-900 rounded-[2rem] text-white">
                   <Trophy className="h-10 w-10 text-yellow-400 mx-auto mb-2" />
-                  <p className="text-4xl font-black italic">{score}/7</p>
+                  <p className="text-4xl font-black italic">{score}/{quiz.length}</p>
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-2 text-red-500">
-                    {score === 7 ? "FLAWLESS VICTORY!" : score > 4 ? "VICTORY" : "FATALITY"}
+                    {score === quiz.length ? "FLAWLESS VICTORY!" : score > (quiz.length / 2) ? "VICTORY" : "FATALITY"}
                   </p>
-                  <button onClick={generateAIQuiz} className="mt-4 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">
+                  <button onClick={generateAIQuiz} className="mt-4 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest transition-colors">
                     Try New Gauntlet
                   </button>
                 </div>
