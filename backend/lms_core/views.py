@@ -1,169 +1,235 @@
-import os
 import json
-from django.shortcuts import get_object_or_404
-from django.contrib.auth import get_user_model
+import google.generativeai as genai
+from django.conf import settings
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from google import genai
 
-from .models import Course, Lesson, Enrollment
+from .models import Course, Lesson, Enrollment, User
 from .serializers import (
-    CourseSerializer, 
-    LessonSerializer, 
-    EnrollmentSerializer, 
-    UserSerializer,
-    CustomTokenObtainPairSerializer
+    CourseSerializer, LessonSerializer, EnrollmentSerializer,
+    UserSerializer, CustomTokenObtainPairSerializer
 )
 
-User = get_user_model()
+
+# ==========================================
+# 1. AUTHENTICATION & REGISTRATION
+# ==========================================
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
-    try:
-        username = request.data.get('username')
-        password = request.data.get('password')
-        email = request.data.get('email', '')
-        role = request.data.get('role', 'STUDENT').upper()
-        user = User.objects.create_user(
-            username=username, password=password, email=email,
-            is_instructor=(role == 'INSTRUCTOR')
-        )
-        refresh = RefreshToken.for_user(user)
+    data = request.data.copy()
+    is_inst = data.get('is_instructor', False)
+    role = data.get('role', '').lower()
+    data['is_instructor'] = True if (is_inst == 'true' or is_inst is True or role == 'instructor') else False
+    serializer = UserSerializer(data=data)
+    if serializer.is_valid():
+        user = serializer.save()
         return Response({
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "user": UserSerializer(user).data
+            "message": "User registered successfully!",
+            "username": user.username,
+            "is_instructor": user.is_instructor
         }, status=status.HTTP_201_CREATED)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_data(request):
-    return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+    serializer = UserSerializer(request.user)
+    return Response(serializer.data)
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_instructor_analytics(request):
-    courses = Course.objects.filter(instructor=request.user)
-    data = []
-    for course in courses:
-        enrollments = Enrollment.objects.filter(course=course).select_related('user')
-        student_list = []
-        for enrollment in enrollments:
-            total = course.lessons.count()
-            comp = enrollment.completed_lessons.count()
-            perc = int((comp / total) * 100) if total > 0 else 0
-            
-            student_list.append({
-                "username": enrollment.user.username,
-                "enrolled_at": enrollment.enrolled_at.strftime("%Y-%m-%d"),
-                "percentage": perc
-            })
-        data.append({
-            "id": course.id,
-            "title": course.title,
-            "difficulty": course.difficulty,
-            "total_lessons": course.lessons.count(),
-            "students": student_list
-        })
-    return Response(data, status=status.HTTP_200_OK)
+
+# ==========================================
+# 2. CORE DASHBOARD VIEWS
+# ==========================================
 
 class CourseViewSet(viewsets.ModelViewSet):
+    queryset = Course.objects.all()
     serializer_class = CourseSerializer
+    permission_classes = [IsAuthenticated]
     lookup_field = 'slug'
 
-    def get_queryset(self):
-        queryset = Course.objects.all()
-        if self.request.query_params.get('instructor') == 'true':
-            return queryset.filter(instructor=self.request.user)
-        
-        if 'student/dashboard' in self.request.path or self.request.query_params.get('enrolled') == 'true':
-            if self.request.user.is_authenticated:
-                return queryset.filter(enrollments__user=self.request.user)
-            return Course.objects.none()
-            
-        return queryset
-    
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()]
-        return [IsAuthenticated()]
+    @action(detail=False, methods=['get'], url_path='explore')
+    def explore(self, request):
+        enrolled_ids = Enrollment.objects.filter(
+            user=request.user
+        ).values_list('course_id', flat=True)
+        courses = Course.objects.exclude(id__in=enrolled_ids)
+        serializer = self.get_serializer(courses, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         serializer.save(instructor=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        course = self.get_object()
+        if course.instructor != request.user:
+            return Response({"error": "Only the course creator can delete this course."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
 
 class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     permission_classes = [IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        course_identifier = data.get('course_id') or data.get('courseId') or data.get('course_slug') or data.get('courseSlug')
+        if course_identifier and not data.get('course'):
+            try:
+                if str(course_identifier).isdigit():
+                    data['course'] = int(course_identifier)
+                else:
+                    course_obj = Course.objects.get(slug=course_identifier)
+                    data['course'] = course_obj.id
+            except Exception:
+                pass
+        serializer = self.get_serializer(data=data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     def perform_create(self, serializer):
-        course_slug = self.kwargs.get('course_slug')
-        if course_slug:
-            course = get_object_or_404(Course, slug=course_slug)
-            serializer.save(course=course)
+        course = serializer.validated_data.get('course')
+        if course and 'order' not in serializer.validated_data:
+            last_lesson = Lesson.objects.filter(course=course).order_by('order').last()
+            next_order = (getattr(last_lesson, 'order', 0) or 0) + 1
+            serializer.save(order=next_order)
         else:
             serializer.save()
+
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
     serializer_class = EnrollmentSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.is_authenticated:
-            return Enrollment.objects.filter(user=self.request.user)
-        return Enrollment.objects.none()
+        return Enrollment.objects.filter(user=self.request.user)
 
-    def create(self, request):
-        course_id = request.data.get('course')
-        course = get_object_or_404(Course, id=course_id)
-        en, _ = Enrollment.objects.get_or_create(user=request.user, course=course)
-        return Response(EnrollmentSerializer(en).data, status=status.HTTP_201_CREATED)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        enrollment = self.get_object()
+        if enrollment.user != request.user:
+            return Response({"error": "You can only unenroll yourself."}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
+
+# ==========================================
+# 3. EXTRA FEATURES (ANALYTICS, PROGRESS & AI)
+# ==========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_instructor_analytics(request):
+    if not getattr(request.user, 'is_instructor', False):
+        return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+    courses = Course.objects.filter(instructor=request.user)
+    return Response({
+        "total_courses": courses.count(),
+        "total_students": Enrollment.objects.filter(course__in=courses).count()
+    })
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_lesson_completed(request, course_slug, lesson_id):
-    course = get_object_or_404(Course, slug=course_slug)
-    lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
-    
-    enrollment, created = Enrollment.objects.get_or_create(user=request.user, course=course)
-    enrollment.completed_lessons.add(lesson)
+    try:
+        course = Course.objects.get(slug=course_slug)
+        lesson = Lesson.objects.get(id=lesson_id, course=course)
+        enrollment = Enrollment.objects.get(user=request.user, course=course)
 
-    total_lessons = course.lessons.count()
-    if enrollment.completed_lessons.count() == total_lessons:
-        enrollment.is_completed = True
-        enrollment.certificate_url = f"https://learnflow-lms.com/certificates/{enrollment.id}"
-    
-    enrollment.save()
-    return Response(EnrollmentSerializer(enrollment).data, status=status.HTTP_200_OK)
+        enrollment.completed_lessons.add(lesson)
+
+        total = course.lessons.count()
+        completed = enrollment.completed_lessons.count()
+        progress = int((completed / total) * 100) if total > 0 else 0
+
+        if progress == 100:
+            enrollment.is_completed = True
+            enrollment.save()
+
+        return Response({"message": "Lesson completed!", "progress": progress})
+
+    except Course.DoesNotExist:
+        return Response({"error": "Course not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Lesson.DoesNotExist:
+        return Response({"error": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Enrollment.DoesNotExist:
+        return Response({"error": "You are not enrolled in this course."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_quiz(request, lesson_id):
+    import re
+    import time
+
     try:
-        lesson = get_object_or_404(Lesson, id=lesson_id)
-        api_key = os.getenv("GEMINI_API_KEY", "")
-        client = genai.Client(api_key=api_key)
-        
-        prompt = "Create a 3-question multiple choice quiz based on this text: " + lesson.content + ". Return ONLY a valid JSON array. Format: [{\"question\": \"...\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correctIndex\": 0}]"
-        
-        response = client.models.generate_content(model="gemini-2.0-flash-exp", contents=prompt)
-        
-        raw = response.text.strip()
-        raw = raw.replace(chr(96)*3 + "json", "").replace(chr(96)*3, "").strip()
-        
-        # Django parses it securely before sending it to React
-        parsed_quiz = json.loads(raw)
-        
-        return Response({"quiz": parsed_quiz}, status=status.HTTP_201_CREATED)
+        lesson = Lesson.objects.get(id=lesson_id)
+        content = lesson.content if getattr(lesson, 'content', None) else "General overview of the lesson topics."
+
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+
+        prompt = f"""
+You are a quiz generator. Create exactly 3 multiple choice questions based on the text below.
+Return ONLY a raw JSON array with no explanation, no markdown, no code fences.
+Each object must have these exact keys: "question", "options" (array of 4 strings), "correctIndex" (0-based integer index of correct option).
+Example format: [{{"question": "What is X?", "options": ["A", "B", "C", "D"], "correctIndex": 2}}]
+
+Text: {content[:3000]}
+"""
+        last_error = None
+        response = None
+        for attempt in range(3):
+            try:
+                response = model.generate_content(prompt)
+                break
+            except Exception as e:
+                last_error = e
+                if any(x in str(e).lower() for x in ["quota", "rate", "429", "busy"]):
+                    time.sleep(3)
+                    continue
+                raise e
+
+        if response is None:
+            raise last_error
+
+        raw_text = response.text.strip()
+
+        json_match = re.search(r'\[.*\]', raw_text, re.DOTALL)
+        if not json_match:
+            return Response(
+                {"error": "Gemini returned unexpected format. Try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        quiz_data = json.loads(json_match.group())
+
+        for q in quiz_data:
+            if 'correctIndex' not in q and 'answer' in q:
+                answer = str(q['answer']).strip().upper()
+                letter_map = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+                q['correctIndex'] = letter_map.get(answer[0], 0)
+
+        return Response(quiz_data)
+
+    except Lesson.DoesNotExist:
+        return Response({"error": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": f"Quiz generation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
