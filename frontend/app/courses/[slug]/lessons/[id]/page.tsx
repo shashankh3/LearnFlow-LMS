@@ -17,11 +17,9 @@ export default function LessonPlayerPage() {
   const [lesson, setLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // Progress & Cert State
   const [completed, setCompleted] = useState(false);
   const [certUrl, setCertUrl] = useState<string | null>(null);
   
-  // AI Quiz State
   const [quizLoading, setQuizLoading] = useState(false);
   const [quiz, setQuiz] = useState<any[] | null>(null);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -41,39 +39,30 @@ export default function LessonPlayerPage() {
     if (id) fetchLesson();
   }, [id]);
 
-  // FIX: Calling the new Certificate-Engine endpoint
   const markAsComplete = async () => {
     try {
       const res = await api.post(`/courses/${slug}/lessons/${id}/complete/`);
       setCompleted(true);
       
-      // If the backend generated a certificate, capture it
       if (res.data.is_completed && res.data.certificate_url) {
         setCertUrl(res.data.certificate_url);
         alert(`🎉 Course Completed! Certificate generated: ${res.data.certificate_url}`);
       }
     } catch (err: any) { 
-      alert(err.response?.data?.detail || "You must be enrolled to track progress."); 
+      alert(err.response?.data?.detail || "Error marking complete."); 
     }
   };
 
-  // FIX: Properly parsing Gemini's JSON response
   const generateAIQuiz = async () => {
     setQuizLoading(true); setQuiz(null); setShowResults(false); setAnswers({});
     try {
       const res = await api.post(`/lessons/${id}/generate-quiz/`);
-      let aiText = res.data.quiz;
-      
-      // Strip markdown code blocks if Gemini includes them
-      if (aiText.includes('```')) {
-        aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
-      }
-      
-      const parsedQuiz = JSON.parse(aiText);
-      // Ensure it's an array
+      // Backend now sends pre-parsed, perfect JSON. No more frontend crashing.
+      const parsedQuiz = res.data.quiz;
       setQuiz(Array.isArray(parsedQuiz) ? parsedQuiz : [parsedQuiz]);
     } catch (err: any) { 
-      alert(`AI ERROR: Failed to generate or parse quiz. Try again.`); 
+      console.error(err);
+      alert(`AI ERROR: System busy or returned invalid format. Try again.`); 
     } finally { 
       setQuizLoading(false); 
     }
@@ -86,9 +75,8 @@ export default function LessonPlayerPage() {
     return score;
   };
 
-  // FIX: Ultimate Null-Safety Shields
   if (loading) return <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center font-bold text-slate-500">Loading Lesson Data...</div>;
-  if (!lesson) return <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center font-bold text-red-500">Lesson not found or API error.</div>;
+  if (!lesson) return <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center font-bold text-red-500">Lesson not found.</div>;
 
   const score = calculateScore();
 
@@ -157,9 +145,9 @@ export default function LessonPlayerPage() {
             <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm space-y-8 animate-in slide-in-from-bottom-4 duration-500">
               {quiz.map((q, idx) => (
                 <div key={idx} className="space-y-3">
-                  <p className="font-bold text-slate-900 text-sm">{idx + 1}. {q.question}</p>
+                  <p className="font-bold text-slate-900 text-sm">{idx + 1}. {q?.question}</p>
                   <div className="grid gap-2">
-                    {q.options?.map((opt: string, oIdx: number) => {
+                    {q?.options?.map((opt: string, oIdx: number) => {
                       const isSelected = answers[idx] === oIdx;
                       const isCorrect = showResults && oIdx === q.correctIndex;
                       const isWrong = showResults && isSelected && !isCorrect;
@@ -180,7 +168,6 @@ export default function LessonPlayerPage() {
               ))}
 
               {!showResults ? (
-                // FIX: Dynamic quiz length check instead of hardcoded 7
                 <button 
                   onClick={() => setShowResults(true)} 
                   disabled={Object.keys(answers).length < quiz.length} 

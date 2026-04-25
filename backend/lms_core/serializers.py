@@ -14,20 +14,30 @@ class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = ['id', 'course', 'title', 'content', 'video_url']
-        extra_kwargs = {'course': {'required': False}}
 
 class CourseSerializer(serializers.ModelSerializer):
     instructor_name = serializers.ReadOnlyField(source='instructor.username')
     lessons = LessonSerializer(many=True, read_only=True)
+    progress_percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
         fields = [
             'id', 'title', 'slug', 'description', 
             'instructor_name', 'difficulty', 'lessons', 
-            'instructor', 'thumbnail'
+            'instructor', 'thumbnail', 'progress_percentage'
         ]
         extra_kwargs = {'instructor': {'read_only': True}}
+        
+    def get_progress_percentage(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            enrollment = Enrollment.objects.filter(user=request.user, course=obj).first()
+            if enrollment:
+                total = obj.lessons.count()
+                if total == 0: return 0
+                return int((enrollment.completed_lessons.count() / total) * 100)
+        return 0
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     course_details = CourseSerializer(source='course', read_only=True)
@@ -42,10 +52,9 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         ]
 
     def get_progress_percentage(self, obj):
-        total_lessons = obj.course.lessons.count()
-        if total_lessons == 0:
-            return 0
-        return int((obj.completed_lessons.count() / total_lessons) * 100)
+        total = obj.course.lessons.count()
+        if total == 0: return 0
+        return int((obj.completed_lessons.count() / total) * 100)
         
     def get_completed_lesson_ids(self, obj):
         return list(obj.completed_lessons.values_list('id', flat=True))

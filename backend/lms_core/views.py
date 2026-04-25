@@ -151,17 +151,19 @@ def mark_lesson_completed(request, course_slug, lesson_id):
 def generate_quiz(request, lesson_id):
     try:
         lesson = get_object_or_404(Lesson, id=lesson_id)
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY", "")
         client = genai.Client(api_key=api_key)
         
-        prompt = "Create a 3-question quiz based on the lesson content. Return ONLY a raw JSON array. Format: [{\"question\": \"...\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correctIndex\": 0}]"
+        prompt = "Create a 3-question multiple choice quiz based on this text: " + lesson.content + ". Return ONLY a valid JSON array. Format: [{\"question\": \"...\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correctIndex\": 0}]"
         
         response = client.models.generate_content(model="gemini-2.0-flash-exp", contents=prompt)
         
-        backticks = chr(96) * 3
-        raw_text = response.text.strip()
-        raw_text = raw_text.replace(backticks + "json", "").replace(backticks, "").strip()
+        raw = response.text.strip()
+        raw = raw.replace(chr(96)*3 + "json", "").replace(chr(96)*3, "").strip()
         
-        return Response({"quiz": raw_text}, status=status.HTTP_201_CREATED)
+        # Django parses it securely before sending it to React
+        parsed_quiz = json.loads(raw)
+        
+        return Response({"quiz": parsed_quiz}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
