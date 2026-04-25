@@ -6,9 +6,20 @@ import Link from "next/link";
 import api from "@/lib/api";
 import {
   LogOut, LayoutDashboard, BarChart2, BookOpen,
-  TrendingUp, Users, Plus, Edit, Trash2,
-  ChevronRight, Video, FileText, AlertCircle
+  Users, Plus, Edit, Trash2, Video, ChevronRight, TrendingUp
 } from "lucide-react";
+
+const getYoutubeThumbnail = (lessons: any[]) => {
+  for (const lesson of lessons || []) {
+    if (lesson.video_url) {
+      const match = lesson.video_url.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+      );
+      if (match?.[1]) return `https://img.youtube.com/vi/${match[1]}/maxresdefault.jpg`;
+    }
+  }
+  return null;
+};
 
 const getInitials = (name: string) => name?.slice(0, 2).toUpperCase() || "U";
 
@@ -18,7 +29,7 @@ export default function InstructorDashboard() {
   const [courses, setCourses] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,12 +41,12 @@ export default function InstructorDashboard() {
           api.get("/courses/"),
           api.get("/instructor/analytics/")
         ]);
-        // Redirect students away
         if (!profileRes.data.is_instructor) { router.replace("/student/dashboard"); return; }
         setUser(profileRes.data);
-        // Only show courses created by this instructor
-        const myCourses = coursesRes.data.filter((c: any) => c.instructor_name === profileRes.data.username);
-        setCourses(myCourses);
+        const mine = coursesRes.data.filter(
+          (c: any) => c.instructor_name === profileRes.data.username
+        );
+        setCourses(mine);
         setAnalytics(analyticsRes.data);
       } catch {
         localStorage.clear();
@@ -47,9 +58,9 @@ export default function InstructorDashboard() {
     fetchData();
   }, [router]);
 
-  const handleDelete = async (slug: string, id: number) => {
+  const handleDelete = async (slug: string) => {
     if (!confirm("Delete this course? This cannot be undone.")) return;
-    setDeletingId(id);
+    setDeletingSlug(slug);
     try {
       await api.delete(`/courses/${slug}/`);
       setCourses(prev => prev.filter(c => c.slug !== slug));
@@ -57,15 +68,12 @@ export default function InstructorDashboard() {
     } catch {
       alert("Failed to delete course.");
     } finally {
-      setDeletingId(null);
+      setDeletingSlug(null);
     }
   };
 
-  // Stats
   const totalStudents = analytics.reduce((s, c) => s + c.total_students, 0);
   const totalLessons = courses.reduce((s: number, c: any) => s + (c.lessons?.length || 0), 0);
-  const avgProgress = analytics.length > 0
-    ? Math.round(analytics.reduce((s, c) => s + c.avg_progress, 0) / analytics.length) : 0;
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -83,7 +91,7 @@ export default function InstructorDashboard() {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           <div className="px-3 py-2 mb-2">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Instructor Menu</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Instructor</span>
           </div>
           <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold text-sm bg-indigo-600 text-white shadow-sm">
             <LayoutDashboard size={17} /> Dashboard
@@ -102,7 +110,9 @@ export default function InstructorDashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">{user?.username}</p>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">👩‍🏫 Instructor</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+                👩‍🏫 Instructor
+              </span>
             </div>
           </div>
           <button onClick={() => { localStorage.clear(); router.push("/login"); }}
@@ -112,20 +122,22 @@ export default function InstructorDashboard() {
         </div>
       </aside>
 
+      {/* Main */}
       <div className="flex-1 ml-60 flex flex-col min-h-screen">
-        {/* Top navbar */}
+
+        {/* Header */}
         <header className="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Instructor Dashboard</h1>
-            <p className="text-xs text-gray-400">Manage your courses and track student progress</p>
+            <h1 className="text-lg font-bold text-gray-900">My Courses</h1>
+            <p className="text-xs text-gray-400">
+              {courses.length} course{courses.length !== 1 ? "s" : ""} · {totalStudents} student{totalStudents !== 1 ? "s" : ""} · {totalLessons} lessons
+            </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Quick create button */}
             <Link href="/courses/create"
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-semibold text-xs hover:bg-indigo-700 transition-all">
-              <Plus size={15} /> New Course
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200">
+              <Plus size={16} /> New Course
             </Link>
-            {/* User chip */}
             <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2">
               <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[10px] font-black">
                 {getInitials(user?.username || "")}
@@ -140,143 +152,114 @@ export default function InstructorDashboard() {
 
         <main className="flex-1 p-8">
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[
-              { label: "My Courses", value: courses.length, sub: "Published", icon: <BookOpen size={18} />, bg: "bg-indigo-50", text: "text-indigo-600" },
-              { label: "Total Students", value: totalStudents, sub: "Enrolled", icon: <Users size={18} />, bg: "bg-blue-50", text: "text-blue-600" },
-              { label: "Total Lessons", value: totalLessons, sub: "Across courses", icon: <Video size={18} />, bg: "bg-green-50", text: "text-green-600" },
-              { label: "Avg Progress", value: `${avgProgress}%`, sub: "Student completion", icon: <TrendingUp size={18} />, bg: "bg-amber-50", text: "text-amber-600" },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</span>
-                  <div className={`p-2 rounded-xl ${stat.bg} ${stat.text}`}>{stat.icon}</div>
-                </div>
-                <p className="text-2xl font-black text-gray-900">{stat.value}</p>
-                <p className="text-xs text-gray-400 mt-1">{stat.sub}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-            <Link href="/courses/create"
-              className="flex items-center gap-4 p-5 bg-white border-2 border-dashed border-indigo-200 rounded-2xl hover:border-indigo-400 hover:bg-indigo-50 transition-all group">
-              <div className="w-12 h-12 bg-indigo-50 group-hover:bg-indigo-100 rounded-xl flex items-center justify-center transition-colors">
-                <Plus size={22} className="text-indigo-600" />
-              </div>
-              <div>
-                <p className="font-bold text-gray-900 text-sm">Create New Course</p>
-                <p className="text-xs text-gray-400">Add title, description, thumbnail</p>
-              </div>
-            </Link>
-
-            <Link href="/instructor/analytics"
-              className="flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-2xl hover:shadow-md transition-all group">
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
-                <BarChart2 size={22} className="text-purple-600" />
-              </div>
-              <div>
-                <p className="font-bold text-gray-900 text-sm">View Analytics</p>
-                <p className="text-xs text-gray-400">Student progress & completion</p>
-              </div>
-              <ChevronRight size={16} className="text-gray-300 ml-auto group-hover:text-indigo-600 transition-colors" />
-            </Link>
-
-            <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl text-white">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                <Users size={22} className="text-white" />
-              </div>
-              <div>
-                <p className="font-black text-lg leading-tight">{totalStudents}</p>
-                <p className="text-indigo-200 text-xs">Total students enrolled</p>
-              </div>
-            </div>
-          </div>
-
-          {/* My Courses List */}
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-bold text-gray-900">My Courses</h2>
-            <Link href="/courses/create" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-              <Plus size={14} /> Add New
-            </Link>
-          </div>
-
           {courses.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200">
-              <BookOpen size={48} className="text-gray-200 mx-auto mb-4" />
-              <p className="text-gray-500 font-bold mb-1">No courses yet</p>
-              <p className="text-gray-300 text-sm mb-6">Create your first course to get started</p>
-              <Link href="/courses/create" className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-all">
-                Create First Course
-              </Link>
+            /* Empty state */
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <div className="w-24 h-24 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <BookOpen size={40} className="text-indigo-400" />
+                </div>
+                <h2 className="text-xl font-black text-gray-900 mb-2">No courses yet</h2>
+                <p className="text-gray-400 text-sm mb-8 max-w-xs">
+                  Create your first course and start teaching thousands of students
+                </p>
+                <Link href="/courses/create"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                  <Plus size={18} /> Create First Course
+                </Link>
+              </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="divide-y divide-gray-50">
-                {courses.map((course: any) => {
-                  const courseAnalytics = analytics.find(a => a.slug === course.slug);
-                  const lessonCount = course.lessons?.length || 0;
-                  const studentCount = courseAnalytics?.total_students || 0;
-                  const avgProg = courseAnalytics?.avg_progress || 0;
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courses.map((course: any) => {
+                const courseAnalytics = analytics.find(a => a.slug === course.slug);
+                const lessonCount = course.lessons?.length || 0;
+                const studentCount = courseAnalytics?.total_students || 0;
+                const avgProg = courseAnalytics?.avg_progress || 0;
+                const thumbnail = getYoutubeThumbnail(course.lessons);
 
-                  return (
-                    <div key={course.id} className="flex items-center gap-4 p-5 hover:bg-gray-50 transition-colors group">
-                      {/* Course icon */}
-                      <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                        <BookOpen size={20} className="text-indigo-600" />
+                return (
+                  <div key={course.id}
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 group flex flex-col">
+
+                    {/* Thumbnail */}
+                    <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-indigo-100 to-violet-100">
+                      {thumbnail ? (
+                        <img src={thumbnail} alt={course.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <BookOpen size={40} className="text-indigo-300" />
+                        </div>
+                      )}
+                      {/* Overlay on hover with action buttons */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                        <Link href={`/courses/${course.slug}/edit`}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-white text-gray-900 rounded-xl font-bold text-xs hover:bg-indigo-50 transition-colors"
+                          onClick={e => e.stopPropagation()}>
+                          <Edit size={13} /> Edit
+                        </Link>
+                        <Link href={`/instructor/courses/${course.slug}/lessons/create`}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-colors"
+                          onClick={e => e.stopPropagation()}>
+                          <Plus size={13} /> Add Lesson
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(course.slug)}
+                          disabled={deletingSlug === course.slug}
+                          className="p-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50">
+                          <Trash2 size={13} />
+                        </button>
                       </div>
+                      {/* Difficulty badge */}
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-1 bg-black/60 backdrop-blur text-white text-[10px] font-bold rounded-full">
+                          {course.difficulty}
+                        </span>
+                      </div>
+                    </div>
 
-                      {/* Course info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-bold text-gray-900 truncate">{course.title}</p>
-                          <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full flex-shrink-0">{course.difficulty}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-[11px] text-gray-400">
-                          <span className="flex items-center gap-1"><Video size={11} /> {lessonCount} lessons</span>
-                          <span className="flex items-center gap-1"><Users size={11} /> {studentCount} students</span>
-                          <span className="flex items-center gap-1"><TrendingUp size={11} /> {avgProg}% avg progress</span>
-                        </div>
+                    {/* Card body */}
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2 leading-snug">
+                        {course.title}
+                      </h3>
+                      <p className="text-xs text-gray-400 mb-4 line-clamp-1">{course.description || "No description"}</p>
+
+                      {/* Stats row */}
+                      <div className="flex items-center gap-4 text-[11px] text-gray-400 mb-4">
+                        <span className="flex items-center gap-1"><Video size={11} /> {lessonCount} lessons</span>
+                        <span className="flex items-center gap-1"><Users size={11} /> {studentCount} students</span>
+                        <span className="flex items-center gap-1 text-indigo-500 font-bold"><TrendingUp size={11} /> {avgProg}%</span>
                       </div>
 
                       {/* Progress bar */}
-                      <div className="hidden lg:flex items-center gap-2 w-32">
-                        <div className="flex-1 bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${avgProg}%` }} />
-                        </div>
-                        <span className="text-[10px] font-bold text-gray-400">{avgProg}%</span>
+                      <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mb-5">
+                        <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                          style={{ width: `${avgProg}%` }} />
                       </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Link href={`/courses/${course.slug}`}
-                          className="p-2 bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors text-gray-500" title="View Course">
-                          <FileText size={15} />
-                        </Link>
-                        <Link href={`/courses/${course.slug}/edit`}
-                          className="p-2 bg-gray-100 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors text-gray-500" title="Edit Course">
-                          <Edit size={15} />
-                        </Link>
-                        <Link href={`/instructor/courses/${course.slug}/lessons/create`}
-                          className="p-2 bg-gray-100 hover:bg-green-50 hover:text-green-600 rounded-lg transition-colors text-gray-500" title="Add Lesson">
-                          <Plus size={15} />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(course.slug, course.id)}
-                          disabled={deletingId === course.id}
-                          className="p-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors text-gray-500 disabled:opacity-50" title="Delete Course">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
+                      {/* View button */}
+                      <Link href={`/courses/${course.slug}`}
+                        className="mt-auto w-full flex items-center justify-center gap-2 py-2.5 bg-gray-50 border border-gray-200 text-gray-700 rounded-xl font-semibold text-xs hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all">
+                        View Course <ChevronRight size={13} />
+                      </Link>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
+
+              {/* Add new course card */}
+              <Link href="/courses/create"
+                className="bg-white rounded-2xl border-2 border-dashed border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-300 flex flex-col items-center justify-center min-h-[300px] group cursor-pointer">
+                <div className="w-16 h-16 bg-indigo-50 group-hover:bg-indigo-100 rounded-2xl flex items-center justify-center mb-4 transition-colors">
+                  <Plus size={28} className="text-indigo-400 group-hover:text-indigo-600 transition-colors" />
+                </div>
+                <p className="text-sm font-bold text-gray-400 group-hover:text-indigo-600 transition-colors">New Course</p>
+                <p className="text-xs text-gray-300 mt-1">Click to create</p>
+              </Link>
             </div>
           )}
-
         </main>
       </div>
     </div>
