@@ -1,97 +1,163 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import api from "@/lib/api";
-import { BookOpen, Eye, EyeOff, ArrowRight } from "lucide-react";
-import toast from "react-hot-toast";
+import axios from "axios";
+import { Eye, EyeOff, Loader2, BookOpen } from "lucide-react";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.username.trim() || !form.password.trim()) {
+      setError("Please enter your username and password.");
+      return;
+    }
     setLoading(true);
+    setError("");
+
     try {
-      // FIXED: Endpoint changed from /auth/token/ to /auth/login/
-      const res = await api.post("/auth/login/", { username, password });
-      
-      localStorage.setItem("access", res.data.access);
-      localStorage.setItem("refresh", res.data.refresh);
-      
-      toast.success("Welcome back to LearnFlow!");
-      // Redirect to dashboard
-      window.location.href = "/dashboard";
+      // ✅ Use plain axios here — NOT the api instance
+      // This avoids the auth interceptor firing on the login call itself
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL || "https://your-backend.pythonanywhere.com/api"}/auth/token/`,
+        { username: form.username.trim(), password: form.password },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      const { access, refresh } = res.data;
+
+      if (!access) {
+        setError("Invalid response from server. Please try again.");
+        return;
+      }
+
+      // ✅ Store tokens
+      localStorage.setItem("access", access);
+      if (refresh) localStorage.setItem("refresh", refresh);
+
+      // ✅ Decode token to check role and redirect
+      try {
+        const payload = JSON.parse(atob(access.split(".")[1]));
+        if (payload.is_instructor) {
+          router.push("/instructor/dashboard");
+        } else {
+          router.push("/student/dashboard");
+        }
+      } catch {
+        // fallback — fetch profile to determine role
+        const profileRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL || "https://your-backend.pythonanywhere.com/api"}/auth/me/`,
+          { headers: { Authorization: `Bearer ${access}` } }
+        );
+        if (profileRes.data.is_instructor) {
+          router.push("/instructor/dashboard");
+        } else {
+          router.push("/student/dashboard");
+        }
+      }
     } catch (err: any) {
-      console.error("Login Error:", err.response?.data || err.message);
-      toast.error("Invalid username or password. Please try again.");
+      const msg = err.response?.data?.detail
+        || err.response?.data?.non_field_errors?.[0]
+        || "Incorrect username or password.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
-        
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8 cursor-pointer hover:opacity-80 transition-opacity">
-          <BookOpen className="h-8 w-8 text-indigo-600" />
-          <span className="text-3xl font-black text-slate-900 tracking-tighter">LearnFlow</span>
-        </Link>
+    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-6">
+      <div className="w-full max-w-sm">
 
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome back</h1>
-          <p className="text-slate-500 text-sm">Login to continue learning</p>
+        {/* Brand */}
+        <div className="flex items-center justify-center gap-2.5 mb-8">
+          <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+            <BookOpen size={20} className="text-white" />
+          </div>
+          <span className="text-2xl font-black text-indigo-600 tracking-tight">LEARNFLOW</span>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all text-slate-900"
-              placeholder="Enter your username"
-              required
-            />
+        {/* Card */}
+        <div className="bg-white rounded-3xl border border-gray-200/60 shadow-xl shadow-gray-200/40 p-8">
+          <div className="mb-7">
+            <h1 className="text-2xl font-black text-gray-900 mb-1">Welcome back</h1>
+            <p className="text-sm text-gray-400">Sign in to continue learning</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all text-slate-900"
-                placeholder="Enter your password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
+          {error && (
+            <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-600 font-semibold">
+              {error}
             </div>
-          </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-70"
-          >
-            {loading ? "Logging in..." : "Login"} <ArrowRight className="h-4 w-4" />
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Username */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                value={form.username}
+                onChange={e => { setForm({ ...form, username: e.target.value }); setError(""); }}
+                placeholder="Enter your username"
+                autoComplete="username"
+                autoFocus
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              />
+            </div>
 
-        <p className="text-center mt-6 text-sm text-slate-500">
-          Don't have an account? <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-700">Register free</Link>
+            {/* Password */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={e => { setForm({ ...form, password: e.target.value }); setError(""); }}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 active:scale-95 disabled:opacity-60 transition-all shadow-sm shadow-indigo-200 flex items-center justify-center gap-2 mt-2"
+            >
+              {loading
+                ? <><Loader2 size={16} className="animate-spin" /> Signing in...</>
+                : "Sign In"
+              }
+            </button>
+          </form>
+        </div>
+
+        {/* Register link */}
+        <p className="text-center text-sm text-gray-400 mt-6">
+          Don't have an account?{" "}
+          <Link href="/register" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
+            Create one
+          </Link>
         </p>
       </div>
     </div>

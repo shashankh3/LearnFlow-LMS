@@ -1,30 +1,42 @@
 import axios from "axios";
 
-// This log runs immediately when the app starts, regardless of API calls
-console.log("%c>>> API CONFIG LOADED - VERSION 1.1.0 <<<", "color: yellow; font-size: 20px; font-weight: bold;");
-
 const api = axios.create({
-  baseURL: "https://shashankh3.pythonanywhere.com/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://your-backend.pythonanywhere.com/api",
   headers: { "Content-Type": "application/json" },
 });
 
-api.interceptors.request.use((config) => {
-  console.log(`%c[Request] ${config.method?.toUpperCase()} ${config.url}`, "color: cyan;");
-
-  if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
-    config.url += '/';
-  }
-
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("access");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log("%c[Auth] Token attached.", "color: green;");
-    } else {
-      console.warn("%c[Auth] No token found in localStorage['access']", "color: orange;");
+// ✅ Attach token to every request
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("access");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ✅ On 401 — clear tokens but DON'T redirect from here
+// Redirect is handled by each page individually
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== "undefined") {
+      if (error.response?.status === 401) {
+        // Only clear if we're NOT already on login/register page
+        const path = window.location.pathname;
+        if (!path.includes("/login") && !path.includes("/register")) {
+          localStorage.removeItem("access");
+          localStorage.removeItem("refresh");
+          window.location.href = "/login";
+        }
+      }
+    }
+    return Promise.reject(error);
   }
-  return config;
-}, (error) => Promise.reject(error));
+);
 
 export default api;
