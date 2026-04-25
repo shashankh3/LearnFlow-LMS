@@ -6,7 +6,8 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
 import { isLoggedIn, getUser } from "@/lib/auth";
-import { BookOpen, Users, PlusCircle, ArrowRight, BarChart3, FileText } from "lucide-react";
+import { BookOpen, Users, PlusCircle, ArrowRight, BarChart3, FileText, Trash2 } from "lucide-react";
+import toast from "react-hot-toast"; // Imported toast for success/error popups
 
 export default function InstructorDashboard() {
   const router = useRouter();
@@ -50,6 +51,28 @@ export default function InstructorDashboard() {
 
     initializeDashboard();
   }, [router]);
+
+  // NEW: Secure Delete Logic
+  const handleDeleteCourse = async (courseSlug: string) => {
+    // Safety check so instructors don't accidentally click it
+    if (!confirm("Are you absolutely sure you want to delete this ENTIRE course? This action cannot be undone and will delete all lessons inside it.")) return;
+
+    try {
+      // Hit the secure backend endpoint
+      await api.delete(`/courses/${courseSlug}/`);
+      
+      // Instantly remove the course from the screen without reloading
+      setData((prevData: any) => ({
+        ...prevData,
+        courses: prevData.courses.filter((c: any) => c.slug !== courseSlug)
+      }));
+      
+      toast.success("Course deleted successfully!");
+    } catch (error) {
+      console.error("Failed to delete course:", error);
+      toast.error("Failed to delete course. Please try again.");
+    }
+  };
 
   // GATE 1: Show your custom loading spinner while auth and data resolve
   if (loading) {
@@ -132,13 +155,12 @@ export default function InstructorDashboard() {
                 <p className="text-sm text-gray-500 line-clamp-2 mb-4">{course.description}</p>
                 
                 {/* Action Links */}
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4 mt-auto">
                   <Link href={`/courses/${course.slug}`}
                     className="flex items-center gap-1 text-sm text-indigo-600 font-semibold hover:underline">
                     View <ArrowRight size={14} />
                   </Link>
 
-                  {/* New Add Lesson Link */}
                   <Link href={`/instructor/courses/${course.slug}/lessons/create`}
                     className="flex items-center gap-1 text-sm text-blue-600 font-semibold hover:underline">
                     Add Lesson <FileText size={14} />
@@ -148,6 +170,14 @@ export default function InstructorDashboard() {
                     className="flex items-center gap-1 text-sm text-green-600 font-semibold hover:underline">
                     Analytics <BarChart3 size={14} />
                   </Link>
+
+                  {/* The New Delete Button */}
+                  <button 
+                    onClick={() => handleDeleteCourse(course.slug)}
+                    className="flex items-center gap-1 text-sm text-red-600 font-semibold hover:underline ml-auto"
+                  >
+                    Delete <Trash2 size={14} />
+                  </button>
                 </div>
                 
               </div>
