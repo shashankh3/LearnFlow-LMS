@@ -38,11 +38,22 @@ export default function CreateLessonPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await api.post(`/courses/${slug}/lessons/`, formData);
+            // FIXED: We now inject the exact course ID into the data payload
+            // so Django knows exactly where this lesson belongs.
+            const payload = {
+                ...formData,
+                course: course?.id,
+                course_slug: slug
+            };
+
+            // FIXED: Pointing directly to the standard DRF lessons endpoint
+            const res = await api.post(`/lessons/`, payload);
+            
             setLessons([...lessons, res.data]);
             setFormData({ title: "", video_url: "", content: "" });
             toast.success("Lesson published!");
         } catch (err) {
+            console.error("Lesson Save Error:", err);
             toast.error("Failed to save lesson");
         }
     };
