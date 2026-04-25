@@ -6,7 +6,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import {
   LogOut, LayoutDashboard, BarChart2, BookOpen,
-  Users, Plus, Edit, Trash2, Video, ChevronRight, TrendingUp
+  Users, Plus, Video, ChevronRight, TrendingUp
 } from "lucide-react";
 
 const getYoutubeThumbnail = (lessons: any[]) => {
@@ -29,7 +29,6 @@ export default function InstructorDashboard() {
   const [courses, setCourses] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,20 +56,6 @@ export default function InstructorDashboard() {
     };
     fetchData();
   }, [router]);
-
-  const handleDelete = async (slug: string) => {
-    if (!confirm("Delete this course? This cannot be undone.")) return;
-    setDeletingSlug(slug);
-    try {
-      await api.delete(`/courses/${slug}/`);
-      setCourses(prev => prev.filter(c => c.slug !== slug));
-      setAnalytics(prev => prev.filter(c => c.slug !== slug));
-    } catch {
-      alert("Failed to delete course.");
-    } finally {
-      setDeletingSlug(null);
-    }
-  };
 
   const totalStudents = analytics.reduce((s, c) => s + c.total_students, 0);
   const totalLessons = courses.reduce((s: number, c: any) => s + (c.lessons?.length || 0), 0);
@@ -124,8 +109,6 @@ export default function InstructorDashboard() {
 
       {/* Main */}
       <div className="flex-1 ml-60 flex flex-col min-h-screen">
-
-        {/* Header */}
         <header className="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
           <div>
             <h1 className="text-lg font-bold text-gray-900">My Courses</h1>
@@ -151,9 +134,7 @@ export default function InstructorDashboard() {
         </header>
 
         <main className="flex-1 p-8">
-
           {courses.length === 0 ? (
-            /* Empty state */
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
                 <div className="w-24 h-24 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
@@ -161,7 +142,7 @@ export default function InstructorDashboard() {
                 </div>
                 <h2 className="text-xl font-black text-gray-900 mb-2">No courses yet</h2>
                 <p className="text-gray-400 text-sm mb-8 max-w-xs">
-                  Create your first course and start teaching thousands of students
+                  Create your first course and start teaching students
                 </p>
                 <Link href="/courses/create"
                   className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
@@ -182,7 +163,7 @@ export default function InstructorDashboard() {
                   <div key={course.id}
                     className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 group flex flex-col">
 
-                    {/* Thumbnail */}
+                    {/* Thumbnail — hover shows ONLY Add Lesson */}
                     <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-indigo-100 to-violet-100">
                       {thumbnail ? (
                         <img src={thumbnail} alt={course.title}
@@ -192,25 +173,18 @@ export default function InstructorDashboard() {
                           <BookOpen size={40} className="text-indigo-300" />
                         </div>
                       )}
-                      {/* Overlay on hover with action buttons */}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                        <Link href={`/courses/${course.slug}/edit`}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-white text-gray-900 rounded-xl font-bold text-xs hover:bg-indigo-50 transition-colors"
-                          onClick={e => e.stopPropagation()}>
-                          <Edit size={13} /> Edit
+
+                      {/* ✅ Hover overlay — ONLY Add Lesson button */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <Link
+                          href={`/instructor/courses/${course.slug}/lessons/create`}
+                          className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-lg"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Plus size={16} /> Add Lesson
                         </Link>
-                        <Link href={`/instructor/courses/${course.slug}/lessons/create`}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs hover:bg-indigo-700 transition-colors"
-                          onClick={e => e.stopPropagation()}>
-                          <Plus size={13} /> Add Lesson
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(course.slug)}
-                          disabled={deletingSlug === course.slug}
-                          className="p-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50">
-                          <Trash2 size={13} />
-                        </button>
                       </div>
+
                       {/* Difficulty badge */}
                       <div className="absolute top-3 left-3">
                         <span className="px-2.5 py-1 bg-black/60 backdrop-blur text-white text-[10px] font-bold rounded-full">
@@ -226,7 +200,7 @@ export default function InstructorDashboard() {
                       </h3>
                       <p className="text-xs text-gray-400 mb-4 line-clamp-1">{course.description || "No description"}</p>
 
-                      {/* Stats row */}
+                      {/* Stats */}
                       <div className="flex items-center gap-4 text-[11px] text-gray-400 mb-4">
                         <span className="flex items-center gap-1"><Video size={11} /> {lessonCount} lessons</span>
                         <span className="flex items-center gap-1"><Users size={11} /> {studentCount} students</span>
@@ -239,7 +213,7 @@ export default function InstructorDashboard() {
                           style={{ width: `${avgProg}%` }} />
                       </div>
 
-                      {/* View button */}
+                      {/* View Course — Edit/Delete are inside the course page */}
                       <Link href={`/courses/${course.slug}`}
                         className="mt-auto w-full flex items-center justify-center gap-2 py-2.5 bg-gray-50 border border-gray-200 text-gray-700 rounded-xl font-semibold text-xs hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all">
                         View Course <ChevronRight size={13} />
