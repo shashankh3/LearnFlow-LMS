@@ -5,81 +5,83 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { BookOpen, Clock, PlayCircle, Edit3, PlusCircle, Layout, ArrowLeft, Lock, Trash2 } from "lucide-react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 export default function CourseDetailPage() {
   const { slug } = useParams();
   const router = useRouter();
   const [course, setCourse] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
-  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 1. Fetch public course data FIRST. This must succeed independently.
         const courseRes = await api.get(`/courses/${slug}/`);
         setCourse(courseRes.data);
 
-        // 2. Attempt to fetch protected user data. 
-        // If this fails (e.g. 401 Unauthorized), we catch it silently so the course still renders.
         try {
           const [userRes, enrollRes] = await Promise.all([
             api.get("/auth/me/"),
             api.get("/enrollments/")
           ]);
           setUser(userRes.data);
-          const enrolledIds = enrollRes.data.map((e: any) => e.course);
-          if (enrolledIds.includes(courseRes.data.id)) setIsEnrolled(true);
+          
+          // Find the specific enrollment ID for this course
+          const activeEnrollment = enrollRes.data.find((e: any) => e.course === courseRes.data.id);
+          if (activeEnrollment) setEnrollmentId(activeEnrollment.id);
+          
         } catch (authErr) {
-          console.warn("User is not authenticated. Rendering as guest.");
+          console.warn("User not authenticated.");
         }
-
       } catch (err) {
-        console.error("Error fetching course data:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
     };
-    
     fetchData();
   }, [slug]);
 
   const handleEnroll = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    
+    if (!user) { router.push("/login"); return; }
     setActionLoading(true);
     try {
-      await api.post("/enrollments/", { course: course.id, user: user.id });
-      setIsEnrolled(true); 
+      const res = await api.post("/enrollments/", { course: course.id });
+      setEnrollmentId(res.data.id);
+      toast.success("Enrolled successfully!");
     } catch (err: any) {
-      alert(`Failed to enroll: ${err.response?.data?.error || err.message}`);
+      toast.error("Failed to enroll");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleUnenroll = async () => {
-    if (!confirm("Are you sure you want to opt out of this course? Your progress will be reset.")) return;
+    if (!confirm("Are you sure you want to opt out? Your progress will be lost.")) return;
+    if (!enrollmentId) return;
+
     setActionLoading(true);
     try {
-      await api.delete("/enrollments/", { data: { course_id: course.id } });
-      setIsEnrolled(false); 
+      // FIXED: Using the specific Enrollment ID for a clean REST delete
+      await api.delete(`/enrollments/${enrollmentId}/`);
+      setEnrollmentId(null);
+      toast.success("Opted out successfully");
+      router.push("/dashboard");
     } catch (err) {
-      alert("Failed to unenroll");
+      toast.error("Failed to unenroll");
     } finally {
       setActionLoading(false);
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading course details...</div>;
-  if (!course) return <div className="min-h-screen flex flex-col items-center justify-center font-bold text-slate-800 text-2xl">Course not found<Link href="/dashboard" className="text-indigo-600 text-sm mt-4 hover:underline">Return to Dashboard</Link></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading...</div>;
+  if (!course) return <div className="min-h-screen flex flex-col items-center justify-center font-bold text-slate-800 text-2xl">Course not found</div>;
 
   const isInstructor = user?.username === course.instructor_name;
+  const isEnrolled = !!enrollmentId;
 
   return (
     <div className="min-h-screen bg-white">
@@ -109,24 +111,18 @@ export default function CourseDetailPage() {
                   className={`flex items-center justify-between p-5 bg-slate-50 border border-slate-200 rounded-2xl transition-all ${canView ? 'hover:border-indigo-600 cursor-pointer group' : 'opacity-70 cursor-not-allowed'}`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-400 group-hover:text-indigo-600 group-hover:border-indigo-100">{index + 1}</div>
+                    <div className="h-10 w-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-400 group-hover:text-indigo-600">{index + 1}</div>
                     <span className="font-bold text-slate-700 group-hover:text-indigo-600">{lesson.title}</span>
                   </div>
                   {canView ? <PlayCircle className="h-5 w-5 text-slate-300 group-hover:text-indigo-600" /> : <Lock className="h-5 w-5 text-slate-300" />}
                 </div>
               );
             })}
-            
-            {(!course.lessons || course.lessons.length === 0) && (
-              <div className="text-slate-400 italic font-medium p-8 border-2 border-dashed border-slate-200 rounded-2xl text-center">
-                No lessons have been added to this course yet.
-              </div>
-            )}
           </div>
         </div>
 
         <div className="w-full lg:w-96">
-          <div className="sticky top-24 bg-white border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-100 text-center">
+          <div className="sticky top-24 bg-white border border-slate-200 rounded-[2rem] p-8 shadow-xl text-center">
             {isInstructor ? (
               <div className="space-y-3">
                 <div className="bg-indigo-50 h-16 w-16 rounded-2xl flex items-center justify-center mx-auto mb-6"><Layout className="h-8 w-8 text-indigo-600" /></div>
@@ -137,7 +133,7 @@ export default function CourseDetailPage() {
             ) : isEnrolled ? (
                <div className="space-y-4">
                  <h3 className="text-2xl font-black text-slate-900 mb-6 uppercase tracking-tighter italic">Enrolled</h3>
-                 <button onClick={() => course.lessons?.length > 0 ? router.push(`/courses/${course.slug}/lessons/${course.lessons[0].id}`) : alert("No lessons available yet.")} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 transition-all shadow-lg">CONTINUE COURSE</button>
+                 <button onClick={() => course.lessons?.length > 0 ? router.push(`/courses/${course.slug}/lessons/${course.lessons[0].id}`) : toast.error("No lessons yet.")} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm tracking-widest hover:bg-indigo-700 transition-all shadow-lg">CONTINUE COURSE</button>
                  <button onClick={handleUnenroll} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 py-4 text-red-500 font-bold text-xs tracking-widest hover:bg-red-50 rounded-2xl transition-all"><Trash2 className="h-4 w-4" /> OPT OUT OF COURSE</button>
                </div>
             ) : (
