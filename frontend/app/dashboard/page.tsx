@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { BookOpen, PlusCircle, LogOut, Search, LayoutDashboard, Compass, Award, PlayCircle } from "lucide-react";
+// Added Trash2 to the imports!
+import { BookOpen, PlusCircle, LogOut, Search, LayoutDashboard, Compass, Award, PlayCircle, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const getCourseThumbnail = (url: string, title: string) => {
@@ -67,11 +68,30 @@ export default function DashboardPage() {
     router.push("/login");
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div></div>;
+  // NEW: Secure Delete Logic
+  const handleDeleteCourse = async (courseSlug: string) => {
+    if (!confirm("Are you absolutely sure you want to delete this ENTIRE course? This action cannot be undone and will delete all lessons inside it.")) return;
+
+    try {
+      await api.delete(`/courses/${courseSlug}/`);
+      
+      // Remove it instantly from the UI arrays without needing a page refresh
+      setMyCourses((prev) => prev.filter((c: any) => c.slug !== courseSlug));
+      setExploreCourses((prev) => prev.filter((c: any) => c.slug !== courseSlug));
+      
+      toast.success("Course deleted successfully!");
+    } catch (error) {
+      console.error("Failed to delete course:", error);
+      toast.error("Failed to delete course. Ensure you are the creator.");
+    }
+  };
 
   const renderCourseCard = (course: any, isStudentView: boolean = false) => {
     const videoUrl = isStudentView ? course.video_url : course.lessons?.[0]?.video_url;
     const isCompleted = isStudentView && course.percentage === 100;
+    
+    // Check if the current user is the owner of this specific course
+    const isOwner = user?.is_instructor && course.instructor_name === user?.username;
     
     return (
       <div key={course.id} className="bg-white rounded-3xl border border-slate-200 overflow-hidden hover:shadow-2xl transition-all group flex flex-col h-full">
@@ -80,17 +100,16 @@ export default function DashboardPage() {
           <img src={getCourseThumbnail(videoUrl, course.title)} alt={course.title} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
         </div>
         <div className="p-6 flex flex-col flex-1">
-          <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">{course.difficulty}</div>
+          <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2">{course.difficulty || "ALL LEVELS"}</div>
           <h3 className="font-bold text-slate-900 mb-2 leading-tight">{course.title}</h3>
           
-          {/* FIXED: Replaced role check with is_instructor check */}
           {isStudentView && !user?.is_instructor ? (
              <div className="mt-auto pt-4 border-t border-slate-100">
                <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
-                 <span>Progress</span><span>{course.percentage}%</span>
+                 <span>Progress</span><span>{course.percentage || 0}%</span>
                </div>
                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-4">
-                 <div className={`h-full rounded-full transition-all duration-1000 ${isCompleted ? 'bg-green-500' : 'bg-indigo-600'}`} style={{ width: `${course.percentage}%` }}></div>
+                 <div className={`h-full rounded-full transition-all duration-1000 ${isCompleted ? 'bg-green-500' : 'bg-indigo-600'}`} style={{ width: `${course.percentage || 0}%` }}></div>
                </div>
                
                {isCompleted ? (
@@ -106,9 +125,24 @@ export default function DashboardPage() {
           ) : (
             <>
               <p className="text-sm text-slate-500 line-clamp-2 mb-6 flex-1">{course.description}</p>
-              <Link href={`/courses/${course.slug}`} className="w-full block text-center py-3 bg-slate-900 text-white rounded-xl font-bold text-xs tracking-widest hover:bg-indigo-600 transition-colors mt-auto">
-                VIEW COURSE
-              </Link>
+              
+              {/* THE BUTTON CONTAINER */}
+              <div className="flex gap-2 mt-auto">
+                <Link href={`/courses/${course.slug}`} className="flex-1 block text-center py-3 bg-slate-900 text-white rounded-xl font-bold text-xs tracking-widest hover:bg-indigo-600 transition-colors">
+                  VIEW COURSE
+                </Link>
+                
+                {/* INSTRUCTOR DELETE BUTTON (Only shows if they created it) */}
+                {isOwner && (
+                  <button 
+                    onClick={() => handleDeleteCourse(course.slug)}
+                    className="px-4 bg-white border border-red-200 text-red-500 rounded-xl hover:bg-red-500 hover:text-white hover:border-red-500 transition-all flex items-center justify-center"
+                    title="Delete Course"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -149,7 +183,6 @@ export default function DashboardPage() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-bold text-slate-900">{user?.username}</p>
-              {/* FIXED: Evaluates is_instructor to display the correct title */}
               <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
                 {user?.is_instructor ? "INSTRUCTOR" : "STUDENT"}
               </p>
@@ -168,7 +201,6 @@ export default function DashboardPage() {
                   <h1 className="text-3xl font-black text-slate-900 tracking-tight">Welcome, {user?.username}</h1>
                   <p className="text-slate-500 font-medium">Here’s what’s happening with your learning today.</p>
                 </div>
-                {/* FIXED: Correctly identifies instructor to show Create Course button */}
                 {user?.is_instructor && (
                   <div className="flex gap-3">
                     <Link href="/instructor/analytics" className="bg-white text-slate-900 border border-slate-200 px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-sm">VIEW ANALYTICS</Link>
