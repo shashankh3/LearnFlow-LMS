@@ -1,4 +1,5 @@
 import os
+import json
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, status
@@ -84,8 +85,12 @@ class CourseViewSet(viewsets.ModelViewSet):
         queryset = Course.objects.all()
         if self.request.query_params.get('instructor') == 'true':
             return queryset.filter(instructor=self.request.user)
-        if 'student/dashboard' in self.request.path:
-            return queryset.filter(enrollments__user=self.request.user)
+        
+        if 'student/dashboard' in self.request.path or self.request.query_params.get('enrolled') == 'true':
+            if self.request.user.is_authenticated:
+                return queryset.filter(enrollments__user=self.request.user)
+            return Course.objects.none()
+            
         return queryset
     
     def get_permissions(self):
@@ -110,9 +115,13 @@ class LessonViewSet(viewsets.ModelViewSet):
             serializer.save()
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
-    queryset = Enrollment.objects.all()
     serializer_class = EnrollmentSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            return Enrollment.objects.filter(user=self.request.user)
+        return Enrollment.objects.none()
 
     def create(self, request):
         course_id = request.data.get('course')
@@ -120,20 +129,18 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         en, _ = Enrollment.objects.get_or_create(user=request.user, course=course)
         return Response(EnrollmentSerializer(en).data, status=status.HTTP_201_CREATED)
 
-# NEW: The engine that drives the slider and certificate
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_lesson_completed(request, course_slug, lesson_id):
     course = get_object_or_404(Course, slug=course_slug)
     lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
-    enrollment = get_object_or_404(Enrollment, user=request.user, course=course)
-
+    
+    enrollment, created = Enrollment.objects.get_or_create(user=request.user, course=course)
     enrollment.completed_lessons.add(lesson)
 
     total_lessons = course.lessons.count()
     if enrollment.completed_lessons.count() == total_lessons:
         enrollment.is_completed = True
-        # Real Certificate URL Generation
         enrollment.certificate_url = f"https://learnflow-lms.com/certificates/{enrollment.id}"
     
     enrollment.save()
@@ -146,8 +153,15 @@ def generate_quiz(request, lesson_id):
         lesson = get_object_or_404(Lesson, id=lesson_id)
         api_key = os.getenv("GEMINI_API_KEY")
         client = genai.Client(api_key=api_key)
-        prompt = f"Generate a 3-question multiple choice quiz in JSON format based on this text: {lesson.content}"
-        response = client.models.generate_content(model="gemini-3-flash", contents=prompt)
-        return Response({"quiz": response.text}, status=status.HTTP_201_CREATED)
+        
+        prompt = "Create a 3-question quiz based on the lesson content. Return ONLY a raw JSON array. Format: [{\"question\": \"...\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correctIndex\": 0}]"
+        
+        response = client.models.generate_content(model="gemini-2.0-flash-exp", contents=prompt)
+        
+        backticks = chr(96) * 3
+        raw_text = response.text.strip()
+        raw_text = raw_text.replace(backticks + "json", "").replace(backticks, "").strip()
+        
+        return Response({"quiz": raw_text}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
