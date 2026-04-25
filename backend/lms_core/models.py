@@ -41,6 +41,11 @@ class Enrollment(models.Model):
     )
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
     enrolled_at = models.DateTimeField(auto_now_add=True)
+    
+    # NEW: Progress and Certificate Engine
+    completed_lessons = models.ManyToManyField(Lesson, blank=True)
+    is_completed = models.BooleanField(default=False)
+    certificate_url = models.URLField(max_length=500, null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'course')

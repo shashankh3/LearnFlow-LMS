@@ -58,10 +58,14 @@ def get_instructor_analytics(request):
         enrollments = Enrollment.objects.filter(course=course).select_related('user')
         student_list = []
         for enrollment in enrollments:
+            total = course.lessons.count()
+            comp = enrollment.completed_lessons.count()
+            perc = int((comp / total) * 100) if total > 0 else 0
+            
             student_list.append({
                 "username": enrollment.user.username,
                 "enrolled_at": enrollment.enrolled_at.strftime("%Y-%m-%d"),
-                "percentage": 0 
+                "percentage": perc
             })
         data.append({
             "id": course.id,
@@ -116,6 +120,25 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         en, _ = Enrollment.objects.get_or_create(user=request.user, course=course)
         return Response(EnrollmentSerializer(en).data, status=status.HTTP_201_CREATED)
 
+# NEW: The engine that drives the slider and certificate
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_lesson_completed(request, course_slug, lesson_id):
+    course = get_object_or_404(Course, slug=course_slug)
+    lesson = get_object_or_404(Lesson, id=lesson_id, course=course)
+    enrollment = get_object_or_404(Enrollment, user=request.user, course=course)
+
+    enrollment.completed_lessons.add(lesson)
+
+    total_lessons = course.lessons.count()
+    if enrollment.completed_lessons.count() == total_lessons:
+        enrollment.is_completed = True
+        # Real Certificate URL Generation
+        enrollment.certificate_url = f"https://learnflow-lms.com/certificates/{enrollment.id}"
+    
+    enrollment.save()
+    return Response(EnrollmentSerializer(enrollment).data, status=status.HTTP_200_OK)
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_quiz(request, lesson_id):
@@ -123,8 +146,8 @@ def generate_quiz(request, lesson_id):
         lesson = get_object_or_404(Lesson, id=lesson_id)
         api_key = os.getenv("GEMINI_API_KEY")
         client = genai.Client(api_key=api_key)
-        prompt = f"Generate quiz for: {lesson.content}"
+        prompt = f"Generate a 3-question multiple choice quiz in JSON format based on this text: {lesson.content}"
         response = client.models.generate_content(model="gemini-3-flash", contents=prompt)
-        return Response({"message": "Generated"}, status=status.HTTP_201_CREATED)
+        return Response({"quiz": response.text}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

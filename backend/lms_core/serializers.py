@@ -31,9 +31,24 @@ class CourseSerializer(serializers.ModelSerializer):
 
 class EnrollmentSerializer(serializers.ModelSerializer):
     course_details = CourseSerializer(source='course', read_only=True)
+    progress_percentage = serializers.SerializerMethodField()
+    completed_lesson_ids = serializers.SerializerMethodField()
+
     class Meta:
         model = Enrollment
-        fields = ['id', 'user', 'course', 'enrolled_at', 'course_details']
+        fields = [
+            'id', 'user', 'course', 'enrolled_at', 'course_details', 
+            'is_completed', 'certificate_url', 'progress_percentage', 'completed_lesson_ids'
+        ]
+
+    def get_progress_percentage(self, obj):
+        total_lessons = obj.course.lessons.count()
+        if total_lessons == 0:
+            return 0
+        return int((obj.completed_lessons.count() / total_lessons) * 100)
+        
+    def get_completed_lesson_ids(self, obj):
+        return list(obj.completed_lessons.values_list('id', flat=True))
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     username = serializers.CharField(required=False)
