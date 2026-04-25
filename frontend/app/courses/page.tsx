@@ -9,7 +9,6 @@ import {
   Users, ChevronRight, Search, BarChart2
 } from "lucide-react";
 
-// ✅ Same thumbnail logic as dashboard — scans all lessons for first YouTube URL
 const getYoutubeThumbnail = (lessons: any[]) => {
   for (const lesson of lessons || []) {
     if (lesson.video_url) {
@@ -56,7 +55,6 @@ export default function ExplorePage() {
     fetchData();
   }, [router]);
 
-  // Filter logic
   useEffect(() => {
     let result = courses;
     if (search.trim()) {
@@ -77,7 +75,21 @@ export default function ExplorePage() {
       await api.post("/enrollments/", { course: courseId });
       router.push(`/courses/${courseSlug}`);
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Enrollment failed.");
+      const status = err.response?.status;
+      const data = err.response?.data;
+
+      // Already enrolled — just navigate to the course silently
+      if (
+        status === 400 &&
+        (JSON.stringify(data).toLowerCase().includes("already") ||
+         JSON.stringify(data).toLowerCase().includes("unique") ||
+         JSON.stringify(data).toLowerCase().includes("exists"))
+      ) {
+        router.push(`/courses/${courseSlug}`);
+        return;
+      }
+
+      alert(data?.detail || data?.non_field_errors?.[0] || "Enrollment failed. Please try again.");
     } finally {
       setEnrollingId(null);
     }
@@ -137,8 +149,6 @@ export default function ExplorePage() {
 
       {/* Main */}
       <div className="flex-1 ml-60 flex flex-col min-h-screen">
-
-        {/* Header */}
         <header className="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-20">
           <div>
             <h1 className="text-lg font-bold text-gray-900">Explore Courses</h1>
@@ -158,9 +168,8 @@ export default function ExplorePage() {
         </header>
 
         <main className="flex-1 p-8">
-
-          {/* Search + Filter Bar */}
-          <div className="flex items-center gap-3 mb-8">
+          {/* Search + Filter */}
+          <div className="flex items-center gap-3 mb-8 flex-wrap">
             <div className="relative flex-1 max-w-md">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
               <input
@@ -185,7 +194,6 @@ export default function ExplorePage() {
             </div>
           </div>
 
-          {/* Results count */}
           <p className="text-xs text-gray-400 font-semibold mb-5">
             {filtered.length} course{filtered.length !== 1 ? "s" : ""} available
           </p>
@@ -206,25 +214,20 @@ export default function ExplorePage() {
                   <div key={course.id}
                     className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 group flex flex-col">
 
-                    {/* ✅ YouTube thumbnail */}
+                    {/* Thumbnail */}
                     <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-indigo-100 to-violet-100">
                       {thumbnail ? (
-                        <img
-                          src={thumbnail}
-                          alt={course.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+                        <img src={thumbnail} alt={course.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        // Fallback — pretty gradient with initials, no ugly avatar API
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2">
                           <div className="w-16 h-16 bg-indigo-600/20 rounded-2xl flex items-center justify-center">
                             <BookOpen size={28} className="text-indigo-500" />
                           </div>
-                          <p className="text-indigo-400 text-xs font-bold">{course.title?.slice(0, 20)}</p>
+                          <p className="text-indigo-400 text-xs font-bold px-4 text-center line-clamp-1">{course.title}</p>
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-                      {/* Difficulty badge */}
                       <div className="absolute top-3 left-3">
                         <span className="px-2.5 py-1 bg-black/60 backdrop-blur text-white text-[10px] font-bold rounded-full">
                           {course.difficulty}
@@ -232,7 +235,7 @@ export default function ExplorePage() {
                       </div>
                     </div>
 
-                    {/* Card body */}
+                    {/* Body */}
                     <div className="p-5 flex flex-col flex-1">
                       <h3 className="text-sm font-bold text-gray-900 line-clamp-2 leading-snug mb-1">
                         {course.title}
@@ -240,12 +243,8 @@ export default function ExplorePage() {
                       <p className="text-xs text-gray-400 line-clamp-2 mb-3">{course.description}</p>
 
                       <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-5">
-                        <span className="flex items-center gap-1">
-                          <Users size={11} /> {course.instructor_name}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <BookOpen size={11} /> {lessonCount} lessons
-                        </span>
+                        <span className="flex items-center gap-1"><Users size={11} /> {course.instructor_name}</span>
+                        <span className="flex items-center gap-1"><BookOpen size={11} /> {lessonCount} lessons</span>
                       </div>
 
                       <div className="mt-auto space-y-2">
