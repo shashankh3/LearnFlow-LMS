@@ -19,6 +19,8 @@ class CourseSerializer(serializers.ModelSerializer):
     instructor_name = serializers.ReadOnlyField(source='instructor.username')
     lessons = LessonSerializer(many=True, read_only=True)
     progress_percentage = serializers.SerializerMethodField()
+    # NEW: Automated thumbnail handler
+    thumbnail = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -28,6 +30,12 @@ class CourseSerializer(serializers.ModelSerializer):
             'instructor', 'thumbnail', 'progress_percentage'
         ]
         extra_kwargs = {'instructor': {'read_only': True}}
+        
+    def get_thumbnail(self, obj):
+        if obj.thumbnail:
+            return obj.thumbnail
+        # If no image is uploaded, send this professional default tech image automatically
+        return "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&q=80"
         
     def get_progress_percentage(self, obj):
         request = self.context.get('request')
