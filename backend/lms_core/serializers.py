@@ -22,13 +22,18 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'title', 'slug', 'description', 'instructor_name', 'difficulty', 'lessons', 'instructor']
+        fields = [
+            'id', 'title', 'slug', 'description', 
+            'instructor_name', 'difficulty', 'lessons', 
+            'instructor', 'thumbnail'
+        ]
         extra_kwargs = {'instructor': {'read_only': True}}
 
 class EnrollmentSerializer(serializers.ModelSerializer):
+    course_details = CourseSerializer(source='course', read_only=True)
     class Meta:
         model = Enrollment
-        fields = '__all__'
+        fields = ['id', 'user', 'course', 'enrolled_at', 'course_details']
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     username = serializers.CharField(required=False)

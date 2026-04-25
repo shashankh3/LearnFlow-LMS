@@ -1,5 +1,4 @@
 import os
-import json
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets, status
@@ -10,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from google import genai
 
-from .models import Course, Lesson, Enrollment, Quiz, Question, Choice
+from .models import Course, Lesson, Enrollment
 from .serializers import (
     CourseSerializer, 
     LessonSerializer, 
@@ -33,9 +32,7 @@ def register_user(request):
         email = request.data.get('email', '')
         role = request.data.get('role', 'STUDENT').upper()
         user = User.objects.create_user(
-            username=username, 
-            password=password, 
-            email=email,
+            username=username, password=password, email=email,
             is_instructor=(role == 'INSTRUCTOR')
         )
         refresh = RefreshToken.for_user(user)
@@ -52,7 +49,6 @@ def register_user(request):
 def get_user_data(request):
     return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
 
-# --- NEW ANALYTICS VIEW ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_instructor_analytics(request):
@@ -82,9 +78,10 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Course.objects.all()
-        instructor_only = self.request.query_params.get('instructor')
-        if instructor_only == 'true' and self.request.user.is_authenticated:
+        if self.request.query_params.get('instructor') == 'true':
             return queryset.filter(instructor=self.request.user)
+        if 'student/dashboard' in self.request.path:
+            return queryset.filter(enrollments__user=self.request.user)
         return queryset
     
     def get_permissions(self):
