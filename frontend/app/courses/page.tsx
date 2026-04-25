@@ -75,21 +75,21 @@ export default function ExplorePage() {
       await api.post("/enrollments/", { course: courseId });
       router.push(`/courses/${courseSlug}`);
     } catch (err: any) {
-      const status = err.response?.status;
+      const respStatus = err.response?.status;
       const data = err.response?.data;
+      const rawError = JSON.stringify(data);
 
-      // Already enrolled — just navigate to the course silently
+      // ✅ Already enrolled — just go to the course silently
       if (
-        status === 400 &&
-        (JSON.stringify(data).toLowerCase().includes("already") ||
-         JSON.stringify(data).toLowerCase().includes("unique") ||
-         JSON.stringify(data).toLowerCase().includes("exists"))
+        respStatus === 400 &&
+        rawError.toLowerCase().match(/already|unique|exists|duplicate/)
       ) {
         router.push(`/courses/${courseSlug}`);
         return;
       }
 
-      alert(data?.detail || data?.non_field_errors?.[0] || "Enrollment failed. Please try again.");
+      // ✅ Shows EXACT backend error so we can debug
+      alert(`DEBUG — Status ${respStatus}: ${rawError}`);
     } finally {
       setEnrollingId(null);
     }
@@ -241,12 +241,10 @@ export default function ExplorePage() {
                         {course.title}
                       </h3>
                       <p className="text-xs text-gray-400 line-clamp-2 mb-3">{course.description}</p>
-
                       <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-5">
                         <span className="flex items-center gap-1"><Users size={11} /> {course.instructor_name}</span>
                         <span className="flex items-center gap-1"><BookOpen size={11} /> {lessonCount} lessons</span>
                       </div>
-
                       <div className="mt-auto space-y-2">
                         <button
                           onClick={() => handleEnroll(course.id, course.slug)}
