@@ -6,6 +6,8 @@ import Link from "next/link";
 import axios from "axios";
 import { Eye, EyeOff, Loader2, BookOpen } from "lucide-react";
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "" });
@@ -23,50 +25,36 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // ✅ Use plain axios here — NOT the api instance
-      // This avoids the auth interceptor firing on the login call itself
       const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || "https://your-backend.pythonanywhere.com/api"}/auth/token/`,
+        `${BASE_URL}/auth/token/`,
         { username: form.username.trim(), password: form.password },
         { headers: { "Content-Type": "application/json" } }
       );
 
       const { access, refresh } = res.data;
+      if (!access) { setError("Invalid response. Please try again."); return; }
 
-      if (!access) {
-        setError("Invalid response from server. Please try again.");
-        return;
-      }
-
-      // ✅ Store tokens
       localStorage.setItem("access", access);
       if (refresh) localStorage.setItem("refresh", refresh);
 
-      // ✅ Decode token to check role and redirect
+      // Decode JWT payload to get role
       try {
         const payload = JSON.parse(atob(access.split(".")[1]));
-        if (payload.is_instructor) {
-          router.push("/instructor/dashboard");
-        } else {
-          router.push("/student/dashboard");
-        }
+        router.push(payload.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
       } catch {
-        // fallback — fetch profile to determine role
-        const profileRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL || "https://your-backend.pythonanywhere.com/api"}/auth/me/`,
-          { headers: { Authorization: `Bearer ${access}` } }
-        );
-        if (profileRes.data.is_instructor) {
-          router.push("/instructor/dashboard");
-        } else {
-          router.push("/student/dashboard");
-        }
+        // Fallback — fetch profile
+        const profile = await axios.get(`${BASE_URL}/auth/me/`, {
+          headers: { Authorization: `Bearer ${access}` }
+        });
+        router.push(profile.data.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
       }
+
     } catch (err: any) {
-      const msg = err.response?.data?.detail
-        || err.response?.data?.non_field_errors?.[0]
-        || "Incorrect username or password.";
-      setError(msg);
+      setError(
+        err.response?.data?.detail ||
+        err.response?.data?.non_field_errors?.[0] ||
+        "Incorrect username or password."
+      );
     } finally {
       setLoading(false);
     }
@@ -98,7 +86,6 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Username */}
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
                 Username
@@ -114,7 +101,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
                 Password
@@ -128,22 +114,15 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 active:scale-95 disabled:opacity-60 transition-all shadow-sm shadow-indigo-200 flex items-center justify-center gap-2 mt-2"
-            >
+            <button type="submit" disabled={loading}
+              className="w-full py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 active:scale-95 disabled:opacity-60 transition-all shadow-sm shadow-indigo-200 flex items-center justify-center gap-2 mt-2">
               {loading
                 ? <><Loader2 size={16} className="animate-spin" /> Signing in...</>
                 : "Sign In"
@@ -152,7 +131,6 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Register link */}
         <p className="text-center text-sm text-gray-400 mt-6">
           Don't have an account?{" "}
           <Link href="/register" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
