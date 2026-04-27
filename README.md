@@ -30,8 +30,8 @@ LearnFlow is a modern LMS built to bridge the gap between video learning and act
 
 ## 🔑 Portfolio Demo Access
 Use these credentials to bypass registration and test the application immediately:
-- **Instructor Account:** `admin` / `admin1234`
-- **Student Account:** `student1` / `student123`
+- **Instructor Account:** `jojoINSTR` / `123456`
+- **Student Account:** `newbie99` / `newnewnew`
 
 ---
 
