@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -10,10 +11,12 @@ import {
   ChevronRight, Play, RotateCcw, BookOpen, Loader2
 } from "lucide-react";
 
+
 const getYoutubeId = (url: string) => {
   const match = url?.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
   return match?.[1] || null;
 };
+
 
 const getYoutubeThumbnail = (lessons: any[]) => {
   for (const lesson of lessons || []) {
@@ -23,9 +26,11 @@ const getYoutubeThumbnail = (lessons: any[]) => {
   return null;
 };
 
+
 export default function CourseDetailPage() {
   const router = useRouter();
   const { slug } = useParams();
+
 
   const [course, setCourse] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
@@ -33,6 +38,7 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeLesson, setActiveLesson] = useState<any>(null);
   const [toggling, setToggling] = useState(false);
+
 
   // Quiz state
   const [quiz, setQuiz] = useState<any[]>([]);
@@ -42,9 +48,11 @@ export default function CourseDetailPage() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
 
+
   // Delete state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,16 +84,16 @@ export default function CourseDetailPage() {
     fetchData();
   }, [slug, router]);
 
+
   const isLessonDone = (lessonId: number) =>
     enrollment?.completed_lessons?.includes(lessonId);
 
-  // ✅ Toggle mark/unmark — updates state immediately without page refresh
+
   const handleToggleComplete = async () => {
     if (!activeLesson || !enrollment || toggling) return;
     setToggling(true);
     try {
       const res = await api.post(`/courses/${slug}/lessons/${activeLesson.id}/complete/`);
-      // Update enrollment in place — no refetch needed
       setEnrollment((prev: any) => ({
         ...prev,
         progress: res.data.progress,
@@ -99,7 +107,7 @@ export default function CourseDetailPage() {
     }
   };
 
-  // ✅ Fixed quiz — clears previous state properly and shows inline errors
+
   const handleGenerateQuiz = async () => {
     if (!activeLesson || quizLoading) return;
     setQuizLoading(true);
@@ -123,6 +131,7 @@ export default function CourseDetailPage() {
     }
   };
 
+
   const handleDeleteCourse = async () => {
     setDeleting(true);
     try {
@@ -135,7 +144,9 @@ export default function CourseDetailPage() {
     }
   };
 
+
   const quizScore = quiz.filter((q, i) => quizAnswers[i] === q.correctIndex).length;
+
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
@@ -146,11 +157,13 @@ export default function CourseDetailPage() {
     </div>
   );
 
+
   if (!course) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
       <p className="text-gray-400 font-semibold">Course not found</p>
     </div>
   );
+
 
   const isInstructor = user?.is_instructor && course.instructor_name === user?.username;
   const progress = enrollment?.progress ?? 0;
@@ -161,8 +174,10 @@ export default function CourseDetailPage() {
   const activeLessonDone = activeLesson ? isLessonDone(activeLesson.id) : false;
   const activeLessonIndex = course.lessons?.findIndex((l: any) => l.id === activeLesson?.id) ?? 0;
 
+
   return (
     <div className="min-h-screen bg-[#f5f5f7]">
+
 
       {/* ── Delete Modal ── */}
       {showDeleteModal && (
@@ -189,6 +204,7 @@ export default function CourseDetailPage() {
         </div>
       )}
 
+
       {/* ── Top Nav ── */}
       <div className="bg-white border-b border-gray-200/60 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -200,7 +216,6 @@ export default function CourseDetailPage() {
             Dashboard
           </Link>
 
-          {/* Progress pill for students */}
           {!isInstructor && enrollment && (
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 font-semibold">
@@ -214,7 +229,6 @@ export default function CourseDetailPage() {
             </div>
           )}
 
-          {/* Instructor tools in nav */}
           {isInstructor && (
             <div className="flex items-center gap-2">
               <Link href={`/instructor/courses/${slug}/lessons/create`}
@@ -234,13 +248,14 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
+
       {/* ── Main Layout ── */}
       <div className="max-w-7xl mx-auto px-6 py-6 flex gap-6">
+
 
         {/* ── LEFT: Lesson Sidebar ── */}
         <aside className="w-72 flex-shrink-0">
           <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden sticky top-20">
-            {/* Course info */}
             <div className="p-5 border-b border-gray-100">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full">
@@ -250,7 +265,6 @@ export default function CourseDetailPage() {
               <h2 className="text-sm font-black text-gray-900 line-clamp-2 leading-snug mb-3">
                 {course.title}
               </h2>
-              {/* Progress bar */}
               {!isInstructor && enrollment && (
                 <div>
                   <div className="flex justify-between text-[10px] text-gray-400 font-semibold mb-1.5">
@@ -265,7 +279,6 @@ export default function CourseDetailPage() {
               )}
             </div>
 
-            {/* Lesson list */}
             <div className="overflow-y-auto max-h-[calc(100vh-280px)]">
               {course.lessons?.map((lesson: any, idx: number) => {
                 const done = isLessonDone(lesson.id);
@@ -287,7 +300,6 @@ export default function CourseDetailPage() {
                         : 'border-transparent hover:bg-gray-50 hover:border-gray-200'
                     }`}
                   >
-                    {/* Status circle */}
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all ${
                       done ? 'bg-green-500 text-white' :
                       isActive ? 'bg-indigo-600 text-white' :
@@ -296,7 +308,6 @@ export default function CourseDetailPage() {
                       {done ? <CheckCircle size={14} /> : idx + 1}
                     </div>
 
-                    {/* Lesson title */}
                     <div className="flex-1 min-w-0">
                       <p className={`text-xs font-semibold truncate ${
                         isActive ? 'text-indigo-700' : done ? 'text-gray-400' : 'text-gray-800'
@@ -319,7 +330,6 @@ export default function CourseDetailPage() {
               })}
             </div>
 
-            {/* Certificate */}
             {!isInstructor && enrollment?.is_completed && (
               <div className="p-3 border-t border-gray-100">
                 <Link href={`/courses/${slug}/certificate`}
@@ -336,6 +346,7 @@ export default function CourseDetailPage() {
           </div>
         </aside>
 
+
         {/* ── RIGHT: Video + Actions ── */}
         <div className="flex-1 min-w-0 space-y-5">
 
@@ -343,7 +354,6 @@ export default function CourseDetailPage() {
             <>
               {/* Video Player */}
               <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden">
-                {/* Video */}
                 {ytId ? (
                   <div className="aspect-video bg-black">
                     <iframe
@@ -360,9 +370,7 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-                {/* Lesson info + actions */}
                 <div className="p-6">
-                  {/* Lesson title row */}
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div>
                       <p className="text-[11px] font-bold text-indigo-500 uppercase tracking-widest mb-1">
@@ -384,7 +392,6 @@ export default function CourseDetailPage() {
                   {!isInstructor && enrollment && (
                     <div className="flex flex-wrap items-center gap-3 mt-4">
 
-                      {/* ✅ Toggle Mark Complete — always visible, works for every lesson */}
                       <button
                         onClick={handleToggleComplete}
                         disabled={toggling}
@@ -396,8 +403,6 @@ export default function CourseDetailPage() {
                       >
                         {toggling ? (
                           <Loader2 size={16} className="animate-spin" />
-                        ) : activeLessonDone ? (
-                          <CheckCircle size={16} />
                         ) : (
                           <CheckCircle size={16} />
                         )}
@@ -409,7 +414,6 @@ export default function CourseDetailPage() {
                         }
                       </button>
 
-                      {/* AI Quiz button */}
                       <button
                         onClick={showQuiz ? () => setShowQuiz(false) : handleGenerateQuiz}
                         disabled={quizLoading}
@@ -423,7 +427,6 @@ export default function CourseDetailPage() {
                         }
                       </button>
 
-                      {/* Next lesson button */}
                       {activeLessonIndex < totalLessons - 1 && (
                         <button
                           onClick={() => {
@@ -442,7 +445,6 @@ export default function CourseDetailPage() {
                     </div>
                   )}
 
-                  {/* Not enrolled notice */}
                   {!isInstructor && !enrollment && (
                     <div className="mt-4 flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                       <Lock size={18} className="text-amber-500 flex-shrink-0" />
@@ -453,6 +455,7 @@ export default function CourseDetailPage() {
                   )}
                 </div>
               </div>
+
 
               {/* ── AI Quiz Section ── */}
               {showQuiz && (
@@ -468,7 +471,6 @@ export default function CourseDetailPage() {
                   </div>
 
                   <div className="p-6">
-                    {/* Loading state */}
                     {quizLoading && (
                       <div className="flex flex-col items-center py-10 gap-3">
                         <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -476,7 +478,6 @@ export default function CourseDetailPage() {
                       </div>
                     )}
 
-                    {/* Error state */}
                     {quizError && !quizLoading && (
                       <div className="flex flex-col items-center py-8 gap-4">
                         <p className="text-sm text-red-500 font-semibold text-center">{quizError}</p>
@@ -487,7 +488,6 @@ export default function CourseDetailPage() {
                       </div>
                     )}
 
-                    {/* Quiz questions */}
                     {quiz.length > 0 && !quizLoading && (
                       <>
                         <div className="space-y-7">
@@ -551,12 +551,29 @@ export default function CourseDetailPage() {
                                quizScore >= quiz.length / 2 ? "Good job! Review the ones you missed." :
                                "Keep studying — you've got this!"}
                             </p>
-                            <button
-                              onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); }}
-                              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all"
-                            >
-                              <RotateCcw size={13} /> Retry Quiz
-                            </button>
+
+                            {/* ✅ CHANGED: Two buttons side by side */}
+                            <div className="flex items-center justify-center gap-3 flex-wrap">
+                              <button
+                                onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); }}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all"
+                              >
+                                <RotateCcw size={13} /> Retry Quiz
+                              </button>
+
+                              {/* ✅ NEW: Calls API to get fresh questions */}
+                              <button
+                                onClick={handleGenerateQuiz}
+                                disabled={quizLoading}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 text-white rounded-xl text-xs font-bold hover:bg-violet-700 disabled:opacity-60 transition-all"
+                              >
+                                {quizLoading
+                                  ? <><Loader2 size={13} className="animate-spin" /> Loading...</>
+                                  : <><Sparkles size={13} /> New Questions</>
+                                }
+                              </button>
+                            </div>
+
                           </div>
                         )}
                       </>
