@@ -1,5 +1,4 @@
 import json
-import google.generativeai as genai
 from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, action
@@ -195,56 +194,21 @@ def generate_quiz(request, lesson_id):
 
         content = lesson.content if getattr(lesson, 'content', None) else "General overview of the lesson topics."
 
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-
-        prompt = f"""
-You are a quiz generator. Create exactly 3 multiple choice questions based on the text below.
-Return ONLY a raw JSON array with no explanation, no markdown, no code fences.
-Each object must have these exact keys: "question", "options" (array of 4 strings), "correctIndex" (0-based integer index of correct option).
-Example format: [{{"question": "What is X?", "options": ["A", "B", "C", "D"], "correctIndex": 2}}]
-
-Text: {content[:3000]}
-"""
-        last_error = None
-        response = None
-        for attempt in range(3):
-            try:
-                response = model.generate_content(prompt, request_options={"timeout": 25.0})
-                break
-            except Exception as e:
-                last_error = e
-                if any(x in str(e).lower() for x in ["quota", "rate", "429", "busy", "timeout"]):
-                    time.sleep(3)
-                    continue
-                raise e
-
-        if response is None:
-            raise Exception(f"Failed after 3 attempts. Last error: {last_error}")
-
-        raw_text = response.text.strip()
-        json_match = re.search(r'\[.*\]', raw_text, re.DOTALL)
-        if not json_match:
-            return Response(
-                {"error": "Gemini returned unexpected format. Try again."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-        quiz_data = json.loads(json_match.group())
+        from .services.ai_service import generate_quiz_from_lesson
+        generated_quiz = generate_quiz_from_lesson(content)
 
         quiz = Quiz.objects.create(lesson=lesson, title=f"Quiz for {lesson.title}", status='draft')
 
-        for q in quiz_data:
-            if 'correctIndex' not in q and 'answer' in q:
-                answer = str(q['answer']).strip().upper()
-                letter_map = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
-                q['correctIndex'] = letter_map.get(answer[0], 0)
-            
-            question_obj = Question.objects.create(quiz=quiz, text=q['question'])
-            for idx, opt_text in enumerate(q.get('options', [])):
-                Choice.objects.create(question=question_obj, text=opt_text, is_correct=(idx == q['correctIndex']))
+        for q_data in generated_quiz.questions:
+            question_obj = Question.objects.create(quiz=quiz, text=q_data.question_text)
+            for opt in q_data.options:
+                Choice.objects.create(
+                    question=question_obj,
+                    text=opt.text,
+                    is_correct=(opt.key == q_data.correct_option)
+                )
 
-        return Response({"message": "Quiz generated successfully as draft", "quiz_id": quiz.id, "data": quiz_data})
+        return Response({"message": "Quiz generated successfully as draft", "quiz_id": quiz.id})
 
     except Lesson.DoesNotExist:
         return Response({"error": _("Lesson not found.")}, status=status.HTTP_404_NOT_FOUND)
