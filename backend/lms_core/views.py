@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.utils.translation import gettext_lazy as _
 
 from .models import Course, Lesson, Enrollment, User
 from .serializers import (
@@ -33,7 +34,7 @@ def register_user(request):
     if serializer.is_valid():
         user = serializer.save()
         return Response({
-            "message": "User registered successfully!",
+            "message": _("User registered successfully!"),
             "username": user.username,
             "is_instructor": user.is_instructor
         }, status=status.HTTP_201_CREATED)
@@ -72,7 +73,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         course = self.get_object()
         if course.instructor != request.user:
-            return Response({"error": "Only the course creator can delete this course."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": _("Only the course creator can delete this course.")}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 
 
@@ -123,7 +124,7 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         enrollment = self.get_object()
         if enrollment.user != request.user:
-            return Response({"error": "You can only unenroll yourself."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": _("You can only unenroll yourself.")}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 
 
@@ -161,12 +162,12 @@ def mark_lesson_completed(request, course_slug, lesson_id):
             enrollment.is_completed = True
             enrollment.save()
 
-        return Response({"message": "Lesson completed!", "progress": progress})
+        return Response({"message": _("Lesson completed!"), "progress": progress})
 
     except Course.DoesNotExist:
-        return Response({"error": "Course not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": _("Course not found.")}, status=status.HTTP_404_NOT_FOUND)
     except Lesson.DoesNotExist:
-        return Response({"error": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": _("Lesson not found.")}, status=status.HTTP_404_NOT_FOUND)
     except Enrollment.DoesNotExist:
         return Response({"error": "You are not enrolled in this course."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -178,9 +179,20 @@ def mark_lesson_completed(request, course_slug, lesson_id):
 def generate_quiz(request, lesson_id):
     import re
     import time
+    import os
+    from .models import Quiz, Question, Choice
+
+    sync_ai = os.getenv('SYNC_AI_GENERATION', 'True').lower() == 'true'
 
     try:
         lesson = Lesson.objects.get(id=lesson_id)
+        
+        if not sync_ai:
+            from .tasks import generate_quiz_for_lesson
+            quiz = Quiz.objects.create(lesson=lesson, title=f"Quiz for {lesson.title}", status='draft')
+            generate_quiz_for_lesson.delay(lesson.id, quiz.id)
+            return Response({"message": "Quiz generation started", "quiz_id": quiz.id}, status=status.HTTP_202_ACCEPTED)
+
         content = lesson.content if getattr(lesson, 'content', None) else "General overview of the lesson topics."
 
         genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -198,20 +210,19 @@ Text: {content[:3000]}
         response = None
         for attempt in range(3):
             try:
-                response = model.generate_content(prompt)
+                response = model.generate_content(prompt, request_options={"timeout": 25.0})
                 break
             except Exception as e:
                 last_error = e
-                if any(x in str(e).lower() for x in ["quota", "rate", "429", "busy"]):
+                if any(x in str(e).lower() for x in ["quota", "rate", "429", "busy", "timeout"]):
                     time.sleep(3)
                     continue
                 raise e
 
         if response is None:
-            raise last_error
+            raise Exception(f"Failed after 3 attempts. Last error: {last_error}")
 
         raw_text = response.text.strip()
-
         json_match = re.search(r'\[.*\]', raw_text, re.DOTALL)
         if not json_match:
             return Response(
@@ -221,15 +232,35 @@ Text: {content[:3000]}
 
         quiz_data = json.loads(json_match.group())
 
+        quiz = Quiz.objects.create(lesson=lesson, title=f"Quiz for {lesson.title}", status='draft')
+
         for q in quiz_data:
             if 'correctIndex' not in q and 'answer' in q:
                 answer = str(q['answer']).strip().upper()
                 letter_map = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
                 q['correctIndex'] = letter_map.get(answer[0], 0)
+            
+            question_obj = Question.objects.create(quiz=quiz, text=q['question'])
+            for idx, opt_text in enumerate(q.get('options', [])):
+                Choice.objects.create(question=question_obj, text=opt_text, is_correct=(idx == q['correctIndex']))
 
-        return Response(quiz_data)
+        return Response({"message": "Quiz generated successfully as draft", "quiz_id": quiz.id, "data": quiz_data})
 
     except Lesson.DoesNotExist:
-        return Response({"error": "Lesson not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": _("Lesson not found.")}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({"error": f"Quiz generation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": _("Quiz generation failed: {error}").format(error=str(e))}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approve_quiz(request, quiz_id):
+    from .models import Quiz
+    try:
+        quiz = Quiz.objects.get(id=quiz_id)
+        if not getattr(request.user, 'is_instructor', False) and quiz.lesson.course.instructor != request.user:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+        quiz.status = 'published'
+        quiz.save()
+        return Response({"message": "Quiz published successfully"})
+    except Quiz.DoesNotExist:
+        return Response({"error": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)

@@ -15,3 +15,6 @@ pytest-django>=4.8
 pytest-cov>=5.0
 factory-boy>=3.3
 faker>=24.0
+gunicorn>=21.2.0
+whitenoise>=6.6.0
+dj-database-url>=2.1.0

@@ -48,19 +48,19 @@ class TestValidateAndParse:
             _validate_and_parse(bad)
 
     def test_missing_option_key_raises_error(self):
-        bad_q = {**VALID_PAYLOAD["questions"], "options": {"A": "x", "B": "y", "C": "z"}}
+        bad_q = {**VALID_PAYLOAD["questions"][0], "options": {"A": "x", "B": "y", "C": "z"}}
         bad   = {**VALID_PAYLOAD, "questions": [bad_q] + VALID_PAYLOAD["questions"][1:]}
         with pytest.raises(QuizGenerationError):
             _validate_and_parse(bad)
 
     def test_invalid_correct_option_raises_error(self):
-        bad_q = {**VALID_PAYLOAD["questions"], "correct_option": "Z"}
+        bad_q = {**VALID_PAYLOAD["questions"][0], "correct_option": "Z"}
         bad   = {**VALID_PAYLOAD, "questions": [bad_q] + VALID_PAYLOAD["questions"][1:]}
         with pytest.raises(QuizGenerationError):
             _validate_and_parse(bad)
 
     def test_empty_question_text_raises_error(self):
-        bad_q = {**VALID_PAYLOAD["questions"], "question_text": ""}
+        bad_q = {**VALID_PAYLOAD["questions"][0], "question_text": ""}
         bad   = {**VALID_PAYLOAD, "questions": [bad_q] + VALID_PAYLOAD["questions"][1:]}
         with pytest.raises(QuizGenerationError):
             _validate_and_parse(bad)

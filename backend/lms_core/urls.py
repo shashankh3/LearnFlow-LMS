@@ -10,6 +10,7 @@ from .views import (
     get_user_data,
     get_instructor_analytics,
     generate_quiz,
+    approve_quiz,
     mark_lesson_completed,
     CustomTokenObtainPairView
 )
@@ -36,4 +37,5 @@ urlpatterns = [
     
     # AI Endpoint
     path('lessons/<int:lesson_id>/generate-quiz/', generate_quiz, name='generate_quiz'),
+    path('quizzes/<int:quiz_id>/approve/', approve_quiz, name='approve_quiz'),
 ]

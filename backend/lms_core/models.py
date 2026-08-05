@@ -53,6 +53,11 @@ class Enrollment(models.Model):
 class Quiz(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='quizzes')
     title = models.CharField(max_length=255)
+    STATUS_CHOICES = (
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
 
 class Question(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Course, Lesson, Enrollment
+from .models import Course, Lesson, Enrollment, Quiz, Question, Choice
 
 User = get_user_model()
 
@@ -14,6 +14,23 @@ class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
         fields = ['id', 'course', 'title', 'content', 'video_url']
+
+class ChoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Choice
+        fields = ['id', 'text', 'is_correct']
+
+class QuestionSerializer(serializers.ModelSerializer):
+    choices = ChoiceSerializer(many=True, read_only=True)
+    class Meta:
+        model = Question
+        fields = ['id', 'text', 'choices']
+
+class QuizSerializer(serializers.ModelSerializer):
+    questions = QuestionSerializer(many=True, read_only=True)
+    class Meta:
+        model = Quiz
+        fields = ['id', 'lesson', 'title', 'status', 'questions']
 
 class CourseSerializer(serializers.ModelSerializer):
     instructor_name = serializers.ReadOnlyField(source='instructor.username')

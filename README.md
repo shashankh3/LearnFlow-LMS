@@ -70,10 +70,37 @@ npm install
 npm run dev
 ```
 
+## 🚀 Deployment Architecture
+
+### Current Demo Deployment
+- **Frontend:** Vercel
+- **Backend:** PythonAnywhere (Free Tier)
+- **AI Integration:** Uses synchronous generation (`SYNC_AI_GENERATION=True`) to work within free-tier limitations where persistent background workers are not possible.
+
+### Production Architecture
+For a full-scale deployment (e.g. multi-tenant, high-traffic), the following architecture is required:
+- **Database:** PostgreSQL (via `DATABASE_URL` environment variable)
+- **Task Queue:** Redis + Celery Workers for asynchronous AI quiz generation (`SYNC_AI_GENERATION=False`)
+- **Containerization:** Docker for consistent environment replication
+- **CI/CD:** GitHub Actions for automated testing and deployment
+- **Static Files:** WhiteNoise / CDN for efficient static asset delivery
+
+### Required Environment Variables
+For production deployment, the following variables must be set (see `backend/.env.example`):
+- `SECRET_KEY`
+- `DEBUG` (set to False)
+- `ALLOWED_HOSTS`
+- `CORS_ALLOWED_ORIGINS`
+- `CSRF_TRUSTED_ORIGINS`
+- `DATABASE_URL`
+- `GEMINI_API_KEY`
+- `SYNC_AI_GENERATION`
+
 ---
 
 ## 📚 API Documentation
-This repository includes a fully configured Postman collection for backend testing.
+This repository includes an OpenAPI/Swagger UI at `/api/docs/` when the server is running.
+Also includes a fully configured Postman collection for backend testing.
 - Import the `LearnFlow_Postman_Collection.json` file into Postman to instantly test all endpoints, including Authentication, Course Management, and AI Integrations.
 
 ---
