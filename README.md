@@ -15,7 +15,9 @@ LearnFlow is a modern LMS built to bridge the gap between video learning and act
 ### 🎓 Student Experience
 - **Interactive Learning:** Enroll in courses and track personal progress with a visual dashboard.
 - **"Test Your Might" AI Gauntlet:** Generate interactive quizzes on-demand, powered by **Gemini AI**, based specifically on the current lesson's content.
+  - *Human-in-the-loop:* AI generates quizzes in a **Draft** state. Instructors must review and approve them before they are visible to students.
 - **Professional Certification:** Unlock and generate high-fidelity, print-ready Certificates of Completion upon hitting 100% progress.
+- **Internationalization (i18n):** Basic scaffolding is in place to easily scale the application into multiple languages (currently English/Hindi mapped).
 
 ---
 
@@ -73,8 +75,8 @@ npm run dev
 ## 🚀 Deployment Architecture
 
 ### Current Demo Deployment
-- **Frontend:** Vercel
-- **Backend:** PythonAnywhere (Free Tier)
+- **Frontend:** Vercel (`https://frontend-phi-black-88.vercel.app`)
+- **Backend:** PythonAnywhere Free Tier (`https://shashankh3.pythonanywhere.com`)
 - **AI Integration:** Uses synchronous generation (`SYNC_AI_GENERATION=True`) to work within free-tier limitations where persistent background workers are not possible.
 
 ### Production Architecture
@@ -99,8 +101,12 @@ For production deployment, the following variables must be set (see `backend/.en
 ---
 
 ## 📚 API Documentation
-This repository includes an OpenAPI/Swagger UI at `/api/docs/` when the server is running.
-Also includes a fully configured Postman collection for backend testing.
+The API is fully documented using OpenAPI (Swagger UI) generated via `drf-spectacular`.
+
+- **Live Swagger UI:** [https://shashankh3.pythonanywhere.com/api/docs/](https://shashankh3.pythonanywhere.com/api/docs/)
+- **Raw Schema:** [https://shashankh3.pythonanywhere.com/api/schema/](https://shashankh3.pythonanywhere.com/api/schema/)
+
+This repository also includes a fully configured Postman collection for backend testing.
 - Import the `LearnFlow_Postman_Collection.json` file into Postman to instantly test all endpoints, including Authentication, Course Management, and AI Integrations.
 
 ---
