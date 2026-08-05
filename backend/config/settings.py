@@ -121,5 +121,5 @@ SIMPLE_JWT = {
 # --- CRITICAL FIX FOR USER MODEL CLASH ---
 AUTH_USER_MODEL = 'lms_core.User'
 
-# Gemini API Integration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Fireworks API Integration
+FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY")

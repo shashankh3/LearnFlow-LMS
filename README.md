@@ -1,7 +1,7 @@
 # LearnFlow LMS 🚀
 **A Full-Stack AI-Powered Learning Management System**
 
-LearnFlow is a modern LMS built to bridge the gap between video learning and active knowledge retention. It features a dual-portal system for Instructors and Students, integrated with Google's Gemini AI to provide real-time interactive challenges.
+LearnFlow is a modern LMS built to bridge the gap between video learning and active knowledge retention. It features a dual-portal system for Instructors and Students, integrated with Fireworks AI to provide real-time interactive challenges.
 
 ---
 
@@ -14,7 +14,7 @@ LearnFlow is a modern LMS built to bridge the gap between video learning and act
 
 ### 🎓 Student Experience
 - **Interactive Learning:** Enroll in courses and track personal progress with a visual dashboard.
-- **"Test Your Might" AI Gauntlet:** Generate interactive quizzes on-demand, powered by **Gemini AI**, based specifically on the current lesson's content.
+- **"Test Your Might" AI Gauntlet:** Generate interactive quizzes on-demand, powered by **Fireworks AI**, based specifically on the current lesson's content.
   - *Human-in-the-loop:* AI generates quizzes in a **Draft** state. Instructors must review and approve them before they are visible to students.
 - **Professional Certification:** Unlock and generate high-fidelity, print-ready Certificates of Completion upon hitting 100% progress.
 - **Internationalization (i18n):** Basic scaffolding is in place to easily scale the application into multiple languages (currently English/Hindi mapped).
@@ -25,7 +25,7 @@ LearnFlow is a modern LMS built to bridge the gap between video learning and act
 
 - **Frontend:** Next.js 14, Tailwind CSS, Lucide Icons, Axios, React Hot Toast.
 - **Backend:** Django, Django REST Framework (DRF), SimpleJWT (Auth), Celery.
-- **AI Integration:** Google Generative AI (Gemini).
+- **AI Integration:** Fireworks AI (Llama 3 8B Instruct).
 - **Database:** SQLite (Development).
 
 ---
@@ -95,7 +95,7 @@ For production deployment, the following variables must be set (see `backend/.en
 - `CORS_ALLOWED_ORIGINS`
 - `CSRF_TRUSTED_ORIGINS`
 - `DATABASE_URL`
-- `GEMINI_API_KEY`
+- `FIREWORKS_API_KEY`
 - `SYNC_AI_GENERATION`
 
 ---

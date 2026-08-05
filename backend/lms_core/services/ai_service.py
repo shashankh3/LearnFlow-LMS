@@ -3,7 +3,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 
-import google.generativeai as genai
+import openai
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -112,36 +112,44 @@ def _validate_and_parse(raw_dict: dict) -> GeneratedQuiz:
 
 
 def generate_quiz_from_lesson(lesson_content: str) -> GeneratedQuiz:
-    api_key = getattr(settings, "GEMINI_API_KEY", "")
+    api_key = getattr(settings, "FIREWORKS_API_KEY", "")
     if not api_key:
-        raise QuizGenerationError("GEMINI_API_KEY is not set in your .env file.")
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction=QUIZ_GENERATION_SYSTEM_PROMPT,
-        generation_config=genai.GenerationConfig(
-            response_mime_type="application/json",
+        raise QuizGenerationError("FIREWORKS_API_KEY is not set in your .env file.")
+        
+    client = openai.OpenAI(
+        api_key=api_key,
+        base_url="https://api.fireworks.ai/inference/v1"
+    )
+    
+    user_prompt = f"Generate a quiz for the following lesson content:\n\n---\n{lesson_content}\n---"
+    logger.info("Calling Fireworks API. Content length: %d chars.", len(lesson_content))
+    
+    try:
+        response = client.chat.completions.create(
+            model="accounts/fireworks/models/llama-v3p1-8b-instruct",
+            messages=[
+                {"role": "system", "content": QUIZ_GENERATION_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
             temperature=0.4,
             top_p=0.95,
-            max_output_tokens=2048,
-        ),
-    )
-    user_prompt = f"Generate a quiz for the following lesson content:\n\n---\n{lesson_content}\n---"
-    logger.info("Calling Gemini API. Content length: %d chars.", len(lesson_content))
-    try:
-        response = model.generate_content(user_prompt)
+            max_tokens=2048,
+        )
     except Exception as exc:
-        raise QuizGenerationError(f"Gemini API call failed: {type(exc).__name__}: {exc}") from exc
+        raise QuizGenerationError(f"Fireworks API call failed: {type(exc).__name__}: {exc}") from exc
+        
     try:
-        response_text = response.text
+        response_text = response.choices[0].message.content
     except Exception as exc:
-        finish = getattr(response.candidates, "finish_reason", "unknown") if response.candidates else "unknown"
-        raise QuizGenerationError(f"Gemini response has no text. finish_reason={finish}.") from exc
+        raise QuizGenerationError(f"Fireworks response has no text.") from exc
+        
     cleaned = _strip_markdown_fences(response_text)
     try:
         parsed_dict = json.loads(cleaned)
     except json.JSONDecodeError as exc:
-        raise QuizGenerationError(f"Gemini response is not valid JSON: {exc}. Snippet: {cleaned[:200]}") from exc
+        raise QuizGenerationError(f"Fireworks response is not valid JSON: {exc}. Snippet: {cleaned[:200]}") from exc
+        
     result = _validate_and_parse(parsed_dict)
     logger.info("Quiz generated successfully. %d questions.", len(result.questions))
     return result
