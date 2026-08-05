@@ -6,9 +6,22 @@ from .models import Course, Lesson, Enrollment, Quiz, Question, Choice
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'is_instructor']
+        fields = ['id', 'username', 'email', 'password', 'is_instructor']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
+        user.save()
+        return user
 
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -92,11 +105,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         email = attrs.get('email')
         username = attrs.get('username')
         if email and not username:
-            try:
-                user = User.objects.get(email=email)
+            user = User.objects.filter(email__iexact=email).first()
+            if user:
                 attrs['username'] = user.username
-            except User.DoesNotExist:
-                raise serializers.ValidationError("No account found.")
+            else:
+                raise serializers.ValidationError("No account found with this email.")
         elif not email and not username:
             raise serializers.ValidationError("Credentials required.")
         data = super().validate(attrs)
