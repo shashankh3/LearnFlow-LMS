@@ -17,7 +17,7 @@ if not SECRET_KEY:
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
-ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',')] if allowed_hosts_env else []
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',')] if allowed_hosts_env else ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -94,7 +94,14 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 cors_origins_env = os.getenv('CORS_ALLOWED_ORIGINS', '')
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(',')] if cors_origins_env else []
+if cors_origins_env:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins_env.split(',')]
+else:
+    CORS_ALLOW_ALL_ORIGINS = True
+
+# Fallback for demo flexibility
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 csrf_origins_env = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins_env.split(',')] if csrf_origins_env else []
