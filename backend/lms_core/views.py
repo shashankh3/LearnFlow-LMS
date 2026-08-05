@@ -210,7 +210,7 @@ def generate_quiz(request, lesson_id):
             
             response_data.append({
                 "id": i + 1,
-                "question_text": q_data.question_text,
+                "question": q_data.question_text,
                 "options": options_texts,
                 "correctIndex": correct_index
             })
