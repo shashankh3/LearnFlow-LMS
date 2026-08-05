@@ -126,7 +126,7 @@ def generate_quiz_from_lesson(lesson_content: str) -> GeneratedQuiz:
     
     try:
         response = client.chat.completions.create(
-            model="accounts/fireworks/models/deepseek-v3",
+            model="accounts/fireworks/models/deepseek-v4-flash",
             messages=[
                 {"role": "system", "content": QUIZ_GENERATION_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt}
