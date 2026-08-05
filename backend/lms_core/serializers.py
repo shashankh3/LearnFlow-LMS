@@ -88,6 +88,7 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             'id', 'user', 'course', 'enrolled_at', 'course_details', 
             'is_completed', 'certificate_url', 'progress_percentage', 'completed_lesson_ids'
         ]
+        read_only_fields = ['user']
 
     def get_progress_percentage(self, obj):
         total = obj.course.lessons.count()

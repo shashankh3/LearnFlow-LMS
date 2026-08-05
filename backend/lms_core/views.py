@@ -101,13 +101,7 @@ class LessonViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
-        course = serializer.validated_data.get('course')
-        if course and 'order' not in serializer.validated_data:
-            last_lesson = Lesson.objects.filter(course=course).order_by('order').last()
-            next_order = (getattr(last_lesson, 'order', 0) or 0) + 1
-            serializer.save(order=next_order)
-        else:
-            serializer.save()
+        serializer.save()
 
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
@@ -136,11 +130,48 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 def get_instructor_analytics(request):
     if not getattr(request.user, 'is_instructor', False):
         return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+    
     courses = Course.objects.filter(instructor=request.user)
-    return Response({
-        "total_courses": courses.count(),
-        "total_students": Enrollment.objects.filter(course__in=courses).count()
-    })
+    analytics_data = []
+    
+    for course in courses:
+        enrollments = Enrollment.objects.filter(course=course)
+        total_students = enrollments.count()
+        completed_students = enrollments.filter(is_completed=True).count()
+        total_lessons = course.lessons.count()
+        
+        students_list = []
+        total_progress = 0
+        
+        for enroll in enrollments:
+            completed_cnt = enroll.completed_lessons.count()
+            progress_pct = int((completed_cnt / total_lessons) * 100) if total_lessons > 0 else 0
+            total_progress += progress_pct
+            
+            students_list.append({
+                "username": enroll.user.username,
+                "enrolled_at": enroll.enrolled_at.strftime('%b %d, %Y') if enroll.enrolled_at else "",
+                "percentage": progress_pct,
+                "completed_lessons": completed_cnt,
+                "total_lessons": total_lessons,
+                "is_completed": enroll.is_completed
+            })
+            
+        avg_progress = int(total_progress / total_students) if total_students > 0 else 0
+        
+        analytics_data.append({
+            "id": course.id,
+            "title": course.title,
+            "slug": course.slug,
+            "difficulty": course.difficulty,
+            "total_lessons": total_lessons,
+            "total_students": total_students,
+            "completed_students": completed_students,
+            "avg_progress": avg_progress,
+            "students": students_list
+        })
+        
+    return Response(analytics_data)
 
 
 @api_view(['POST'])
@@ -161,7 +192,12 @@ def mark_lesson_completed(request, course_slug, lesson_id):
             enrollment.is_completed = True
             enrollment.save()
 
-        return Response({"message": _("Lesson completed!"), "progress": progress})
+        return Response({
+            "message": _("Lesson completed!"),
+            "progress": progress,
+            "is_completed": enrollment.is_completed,
+            "completed_lessons": list(enrollment.completed_lessons.values_list('id', flat=True))
+        })
 
     except Course.DoesNotExist:
         return Response({"error": _("Course not found.")}, status=status.HTTP_404_NOT_FOUND)
