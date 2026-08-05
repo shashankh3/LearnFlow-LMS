@@ -35,12 +35,12 @@ class GeneratedQuiz:
     raw_response: dict = field(default_factory=dict)
 
 
-QUIZ_GENERATION_SYSTEM_PROMPT = """You are an expert instructional designer and technical educator. Your task is to analyze the provided lesson text and generate exactly 3 high-quality, challenging multiple-choice practice questions that test the core concepts of the material.
+QUIZ_GENERATION_SYSTEM_PROMPT = """You are an expert instructional designer and technical educator. Your task is to analyze the provided lesson text and generate exactly 5 high-quality, challenging multiple-choice practice questions that test the core concepts of the material.
 
 CRITICAL INSTRUCTIONS:
 1. You must output ONLY valid, parsable JSON. Do not include any markdown formatting (e.g., no ```json blocks), no conversational filler, and no introductory text.
 2. The questions must not be trivial. They must test comprehension and real-world application, not just rote memorization.
-3. If the provided lesson text is too short, nonsensical, or lacks sufficient educational content to generate 3 distinct questions, you MUST return the explicit Error Fallback Schema instead of hallucinating.
+3. If the provided lesson text is too short, nonsensical, or lacks sufficient educational content to generate 5 distinct questions, you MUST return the explicit Error Fallback Schema instead of hallucinating.
 
 REQUIRED JSON SCHEMA (Success):
 {
@@ -86,8 +86,8 @@ def _validate_and_parse(raw_dict: dict) -> GeneratedQuiz:
     if status != "success":
         raise QuizGenerationError(f"Unexpected status value: '{status}'.")
     questions_raw = raw_dict.get("questions")
-    if not isinstance(questions_raw, list) or len(questions_raw) != 3:
-        raise QuizGenerationError(f"Expected exactly 3 questions, got {len(questions_raw) if isinstance(questions_raw, list) else 0}.")
+    if not isinstance(questions_raw, list) or len(questions_raw) != 5:
+        raise QuizGenerationError(f"Expected exactly 5 questions, got {len(questions_raw) if isinstance(questions_raw, list) else 0}.")
     parsed = []
     for i, q in enumerate(questions_raw, 1):
         q_text = q.get("question_text", "").strip()
