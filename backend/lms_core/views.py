@@ -186,29 +186,36 @@ def generate_quiz(request, lesson_id):
     try:
         lesson = Lesson.objects.get(id=lesson_id)
         
-        if not sync_ai:
-            from .tasks import generate_quiz_for_lesson
-            quiz = Quiz.objects.create(lesson=lesson, title=f"Quiz for {lesson.title}", status='draft')
-            generate_quiz_for_lesson.delay(lesson.id, quiz.id)
-            return Response({"message": "Quiz generation started", "quiz_id": quiz.id}, status=status.HTTP_202_ACCEPTED)
-
         content = lesson.content if getattr(lesson, 'content', None) else "General overview of the lesson topics."
 
         from .services.ai_service import generate_quiz_from_lesson
         generated_quiz = generate_quiz_from_lesson(content)
 
-        quiz = Quiz.objects.create(lesson=lesson, title=f"Quiz for {lesson.title}", status='draft')
+        quiz = Quiz.objects.create(lesson=lesson, title=f"Quiz for {lesson.title}", status='published')
 
-        for q_data in generated_quiz.questions:
+        response_data = []
+        for i, q_data in enumerate(generated_quiz.questions):
             question_obj = Question.objects.create(quiz=quiz, text=q_data.question_text)
-            for opt in q_data.options:
+            options_texts = []
+            correct_index = 0
+            for j, opt in enumerate(q_data.options):
                 Choice.objects.create(
                     question=question_obj,
                     text=opt.text,
                     is_correct=(opt.key == q_data.correct_option)
                 )
+                options_texts.append(opt.text)
+                if opt.key == q_data.correct_option:
+                    correct_index = j
+            
+            response_data.append({
+                "id": i + 1,
+                "question_text": q_data.question_text,
+                "options": options_texts,
+                "correctIndex": correct_index
+            })
 
-        return Response({"message": "Quiz generated successfully as draft", "quiz_id": quiz.id})
+        return Response(response_data)
 
     except Lesson.DoesNotExist:
         return Response({"error": _("Lesson not found.")}, status=status.HTTP_404_NOT_FOUND)

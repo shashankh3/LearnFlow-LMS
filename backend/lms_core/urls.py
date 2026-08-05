@@ -40,5 +40,6 @@ urlpatterns = [
     
     # AI Endpoint
     path('lessons/<int:lesson_id>/generate-quiz/', generate_quiz, name='generate_quiz'),
+    path('lessons/<int:lesson_id>/quiz/', generate_quiz, name='generate_quiz_alias'),
     path('quizzes/<int:quiz_id>/approve/', approve_quiz, name='approve_quiz'),
 ]
