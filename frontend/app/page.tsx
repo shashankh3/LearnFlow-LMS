@@ -58,7 +58,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="mt-16 flex flex-wrap justify-center gap-4">
-            {["✅ Free to Use", "🤖 Gemini AI", "⚡ Real-time Progress", "🔐 JWT Secured"].map((badge) => (
+            {["✅ Free to Use", "🤖 DeepSeek AI", "⚡ Real-time Progress", "🔐 JWT Secured"].map((badge) => (
               <span key={badge} className="bg-white border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2 rounded-full shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
                 {badge}
               </span>
@@ -74,7 +74,7 @@ export default function Home() {
             { value: "AI-Powered", label: "Quiz Generation" },
             { value: "Real-Time", label: "Progress Tracking" },
             { value: "JWT Secure", label: "Authentication" },
-            { value: "Free Tier", label: "Gemini AI API" },
+            { value: "Free Tier", label: "DeepSeek AI API" },
           ].map((stat) => (
             <div key={stat.label} className="hover:scale-105 transition-transform">
               <p className="text-2xl font-bold">{stat.value}</p>
@@ -88,10 +88,10 @@ export default function Home() {
       <section id="features" className="py-20 px-4 bg-white">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">Everything you need to learn & teach</h2>
-          <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">Built with Django, Next.js, and Gemini AI for a complete end-to-end learning experience.</p>
+          <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">Built with Django, Next.js, and DeepSeek AI for a complete end-to-end learning experience.</p>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: <Brain size={28} className="text-indigo-600" />, title: "AI Quiz Generation", desc: "Gemini AI auto-generates 3 MCQ questions for every lesson the moment an instructor publishes it." },
+              { icon: <Brain size={28} className="text-indigo-600" />, title: "AI Quiz Generation", desc: "DeepSeek AI auto-generates 5 MCQ questions for every lesson the moment an instructor publishes it." },
               { icon: <BarChart3 size={28} className="text-indigo-600" />, title: "Progress Dashboard", desc: "Students see real-time progress bars. Instructors track completion rates for every enrolled student." },
               { icon: <Users size={28} className="text-indigo-600" />, title: "Role-Based Access", desc: "Separate flows for Instructors and Students — each sees only what's relevant to their role." },
               { icon: <CheckCircle size={28} className="text-indigo-600" />, title: "Lesson Completion", desc: "Students mark lessons complete after passing the quiz, updating their enrollment progress instantly." },
@@ -123,7 +123,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-8 px-4 text-center text-sm">
-        <p>© 2025 LearnFlow LMS — Built with Django + Next.js + Gemini AI</p>
+        <p>© 2025 LearnFlow LMS — Built with Django + Next.js + DeepSeek AI</p>
       </footer>
 
     </div>

@@ -176,12 +176,7 @@ def mark_lesson_completed(request, course_slug, lesson_id):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_quiz(request, lesson_id):
-    import re
-    import time
-    import os
     from .models import Quiz, Question, Choice
-
-    sync_ai = os.getenv('SYNC_AI_GENERATION', 'True').lower() == 'true'
 
     try:
         lesson = Lesson.objects.get(id=lesson_id)

@@ -61,7 +61,7 @@ export default function StudentDashboard() {
   }, [router]);
 
   const totalProgress = enrollments.length > 0
-    ? Math.round(enrollments.reduce((s, e) => s + (e.progress || 0), 0) / enrollments.length)
+    ? Math.round(enrollments.reduce((s, e) => s + (e.progress_percentage || 0), 0) / enrollments.length)
     : 0;
   const completedCourses = enrollments.filter(e => e.is_completed).length;
   const inProgressCourses = enrollments.filter(e => !e.is_completed).length;
@@ -201,7 +201,7 @@ export default function StudentDashboard() {
                 const course = enrollment.course_details;
                 if (!course) return null;
                 const thumbnail = getYoutubeThumbnail(course.lessons);
-                const progress = enrollment.progress || 0;
+                const progress = enrollment.progress_percentage || 0;
                 const isCompleted = enrollment.is_completed;
 
                 return (

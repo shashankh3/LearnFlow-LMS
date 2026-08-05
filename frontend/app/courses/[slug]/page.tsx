@@ -86,20 +86,20 @@ export default function CourseDetailPage() {
 
 
   const isLessonDone = (lessonId: number) =>
-    enrollment?.completed_lessons?.includes(lessonId);
+    enrollment?.completed_lesson_ids?.includes(lessonId);
 
 
   const handleToggleComplete = async () => {
     if (!activeLesson || !enrollment || toggling) return;
     setToggling(true);
     try {
-      const res = await api.post(`/courses/${slug}/lessons/${activeLesson.id}/complete/`);
-      setEnrollment((prev: any) => ({
-        ...prev,
-        progress: res.data.progress,
-        is_completed: res.data.is_completed,
-        completed_lessons: res.data.completed_lessons,
-      }));
+      await api.post(`/courses/${slug}/lessons/${activeLesson.id}/complete/`);
+      // Re-fetch enrollment to get updated completed_lesson_ids
+      const enrollRes = await api.get("/enrollments/");
+      const found = enrollRes.data.find(
+        (e: any) => e.course === course.id || e.course_details?.slug === slug
+      );
+      if (found) setEnrollment(found);
     } catch (err: any) {
       alert(err.response?.data?.error || "Failed to update lesson status.");
     } finally {
