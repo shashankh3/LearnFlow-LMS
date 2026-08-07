@@ -61,8 +61,8 @@ export default function CourseDetailPage() {
         if (!profileRes.data.is_instructor) {
           try {
             const enrollRes = await api.get("/enrollments/");
-            const found = enrollRes.data.find(
-              (e: unknown) => e.course === courseRes.data.id || e.course_details?.slug === slug
+            const found = (enrollRes.data.results || enrollRes.data).find(
+              (e: any) => e.course === courseRes.data.id || e.course_details?.slug === slug
             );
             setEnrollment(found || null);
           } catch {}
@@ -89,11 +89,11 @@ export default function CourseDetailPage() {
       await api.post(`/courses/${slug}/lessons/${activeLesson.id}/complete/`);
       // Re-fetch enrollment to get updated completed_lesson_ids
       const enrollRes = await api.get("/enrollments/");
-      const found = enrollRes.data.find(
-        (e: unknown) => e.course === course.id || e.course_details?.slug === slug
+      const found = (enrollRes.data.results || enrollRes.data).find(
+        (e: any) => e.course === course.id || e.course_details?.slug === slug
       );
       if (found) setEnrollment(found);
-    } catch (err: unknown) {
+    } catch (err: any) {
       alert(err.response?.data?.error || "Failed to update lesson status.");
     } finally {
       setToggling(false);

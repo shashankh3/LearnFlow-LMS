@@ -31,8 +31,8 @@ export default function CertificatePage() {
           api.get("/enrollments/")
         ]);
 
-        const found = enrollRes.data.find(
-          (e: unknown) => e.course === courseRes.data.id || e.course_details?.slug === slug
+        const found = (enrollRes.data.results || enrollRes.data).find(
+          (e: any) => e.course === courseRes.data.id || e.course_details?.slug === slug
         );
 
         if (!found) {
