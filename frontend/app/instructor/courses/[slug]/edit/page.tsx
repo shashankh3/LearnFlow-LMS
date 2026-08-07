@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { ArrowLeft, Save, CheckCircle2 } from "lucide-react";
+import { ArrowLeft,  CheckCircle2 } from "lucide-react";
 
 export default function EditCoursePage() {
   const { slug } = useParams();
@@ -13,6 +13,7 @@ export default function EditCoursePage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState("BEGINNER");
+  const [status, setStatus] = useState("draft");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -24,6 +25,7 @@ export default function EditCoursePage() {
         setTitle(res.data.title);
         setDescription(res.data.description);
         setDifficulty(res.data.difficulty);
+        setStatus(res.data.status || 'draft');
       } catch (err) {
         console.error(err);
       } finally {
@@ -38,12 +40,12 @@ export default function EditCoursePage() {
     setSaving(true);
     try {
       // Use PUT to update the course in Django
-      const res = await api.put(`/courses/${slug}/`, { title, description, difficulty });
+      const res = await api.put(`/courses/${slug}/`, { title, description, difficulty, status });
       setSuccess(true);
       setTimeout(() => {
         router.push(`/courses/${res.data.slug}`); // Redirect back to course page
       }, 1500);
-    } catch (err) {
+    } catch {
       console.error("Failed to update");
     } finally {
       setSaving(false);
@@ -85,6 +87,17 @@ export default function EditCoursePage() {
                 {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map(lvl => (
                   <button key={lvl} type="button" onClick={() => setDifficulty(lvl)} className={`py-4 rounded-2xl font-black text-xs border-2 transition-all ${difficulty === lvl ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>
                     {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Publish Status</label>
+              <div className="grid grid-cols-3 gap-4">
+                {['draft', 'published', 'archived'].map(st => (
+                  <button key={st} type="button" onClick={() => setStatus(st)} className={`py-4 rounded-2xl font-black text-xs border-2 transition-all uppercase ${status === st ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}>
+                    {st}
                   </button>
                 ))}
               </div>

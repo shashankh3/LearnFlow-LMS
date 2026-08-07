@@ -26,7 +26,7 @@ class UserSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = ['id', 'course', 'title', 'content', 'video_url']
+        fields = ['id', 'course', 'title', 'content', 'video_url', 'order', 'duration_minutes', 'is_optional']
 
 class ChoiceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -55,7 +55,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = [
-            'id', 'title', 'slug', 'description', 
+            'id', 'title', 'slug', 'description', 'status',
             'instructor_name', 'difficulty', 'lessons', 
             'instructor', 'thumbnail', 'progress_percentage'
         ]
@@ -86,7 +86,8 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         model = Enrollment
         fields = [
             'id', 'user', 'course', 'enrolled_at', 'course_details', 
-            'is_completed', 'certificate_url', 'progress_percentage', 'completed_lesson_ids'
+            'is_completed', 'certificate_url', 'progress_percentage', 'completed_lesson_ids',
+            'completed_at', 'resume_lesson'
         ]
         read_only_fields = ['user']
 

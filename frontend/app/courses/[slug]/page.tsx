@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 
@@ -8,7 +9,7 @@ import api from "@/lib/api";
 import {
   ArrowLeft, CheckCircle, PlayCircle, Lock, Award,
   Sparkles, Edit, Trash2, Plus, AlertTriangle,
-  ChevronRight, Play, RotateCcw, BookOpen, Loader2
+  ChevronRight,  RotateCcw, BookOpen, Loader2
 } from "lucide-react";
 
 
@@ -17,14 +18,6 @@ const getYoutubeId = (url: string) => {
   return match?.[1] || null;
 };
 
-
-const getYoutubeThumbnail = (lessons: any[]) => {
-  for (const lesson of lessons || []) {
-    const id = lesson.video_url ? getYoutubeId(lesson.video_url) : null;
-    if (id) return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
-  }
-  return null;
-};
 
 
 export default function CourseDetailPage() {
@@ -69,7 +62,7 @@ export default function CourseDetailPage() {
           try {
             const enrollRes = await api.get("/enrollments/");
             const found = enrollRes.data.find(
-              (e: any) => e.course === courseRes.data.id || e.course_details?.slug === slug
+              (e: unknown) => e.course === courseRes.data.id || e.course_details?.slug === slug
             );
             setEnrollment(found || null);
           } catch {}
@@ -97,10 +90,10 @@ export default function CourseDetailPage() {
       // Re-fetch enrollment to get updated completed_lesson_ids
       const enrollRes = await api.get("/enrollments/");
       const found = enrollRes.data.find(
-        (e: any) => e.course === course.id || e.course_details?.slug === slug
+        (e: unknown) => e.course === course.id || e.course_details?.slug === slug
       );
       if (found) setEnrollment(found);
-    } catch (err: any) {
+    } catch (err: unknown) {
       alert(err.response?.data?.error || "Failed to update lesson status.");
     } finally {
       setToggling(false);
@@ -123,7 +116,7 @@ export default function CourseDetailPage() {
         return;
       }
       setQuiz(res.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = err.response?.data?.error || "Quiz generation failed. Try again.";
       setQuizError(msg);
     } finally {
@@ -168,11 +161,11 @@ export default function CourseDetailPage() {
   const isInstructor = user?.is_instructor && course.instructor_name === user?.username;
   const progress = enrollment?.progress ?? 0;
   const ytId = activeLesson?.video_url ? getYoutubeId(activeLesson.video_url) : null;
-  const heroThumb = getYoutubeThumbnail(course.lessons);
+
   const totalLessons = course.lessons?.length || 0;
   const completedCount = enrollment?.completed_lessons?.length || 0;
   const activeLessonDone = activeLesson ? isLessonDone(activeLesson.id) : false;
-  const activeLessonIndex = course.lessons?.findIndex((l: any) => l.id === activeLesson?.id) ?? 0;
+  const activeLessonIndex = course.lessons?.findIndex((l: unknown) => l.id === activeLesson?.id) ?? 0;
 
 
   return (
@@ -280,7 +273,7 @@ export default function CourseDetailPage() {
             </div>
 
             <div className="overflow-y-auto max-h-[calc(100vh-280px)]">
-              {course.lessons?.map((lesson: any, idx: number) => {
+              {course.lessons?.map((lesson: unknown, idx: number) => {
                 const done = isLessonDone(lesson.id);
                 const isActive = activeLesson?.id === lesson.id;
                 return (

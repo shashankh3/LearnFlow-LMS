@@ -19,6 +19,12 @@ LearnFlow is a modern LMS built to bridge the gap between video learning and act
 - **Professional Certification:** Unlock and generate high-fidelity, print-ready Certificates of Completion upon hitting 100% progress.
 - **Internationalization (i18n):** Basic scaffolding is in place to easily scale the application into multiple languages (currently English/Hindi mapped).
 
+### ⚡ Performance & Scale (Free Tier Optimized)
+- **Zero-Bloat Media:** The system leverages externally hosted URLs for images and videos, ensuring the database stays ultra-lightweight.
+- **Global Pagination:** All API lists (courses, enrollments) are aggressively paginated to prevent memory exhaustion on constrained servers.
+- **Idempotency & Safety:** Core actions like enrolling or completing lessons are idempotent. Hitting the server multiple times won't corrupt the database.
+- **Database Efficiency:** Complex dashboards resolve in exactly 3 queries (no N+1 issues), utilizing Django's `select_related` and `prefetch_related` optimizations.
+
 ---
 
 ## 🛠️ Technical Stack

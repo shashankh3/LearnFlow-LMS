@@ -24,7 +24,7 @@ export default function CreateCoursePage() {
     try {
       const res = await api.post("/courses/", form);
       router.push(`/courses/${res.data.slug}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
         err.response?.data?.title?.[0] ||
         err.response?.data?.detail ||

@@ -27,7 +27,7 @@ VALID_PAYLOAD = {
             "options": {"A": "opt1", "B": "opt2", "C": "opt3", "D": "opt4"},
             "correct_option": "A", "explanation": f"Explanation {i}",
         }
-        for i in range(1, 4)
+        for i in range(1, 6)
     ],
 }
 
@@ -36,7 +36,7 @@ class TestValidateAndParse:
     def test_valid_payload_returns_generated_quiz(self):
         result = _validate_and_parse(VALID_PAYLOAD)
         assert isinstance(result, GeneratedQuiz)
-        assert len(result.questions) == 3
+        assert len(result.questions) == 5
 
     def test_error_status_raises_insufficient_content(self):
         with pytest.raises(InsufficientContentError):

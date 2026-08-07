@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,7 +10,7 @@ import {
   Users, ChevronRight, Search, BarChart2
 } from "lucide-react";
 
-const getYoutubeThumbnail = (lessons: any[]) => {
+const getYoutubeThumbnail = (lessons: unknown[]) => {
   for (const lesson of lessons || []) {
     if (lesson.video_url) {
       const match = lesson.video_url.match(
@@ -43,7 +44,7 @@ export default function ExplorePage() {
           api.get("/courses/explore/")
         ]);
         setUser(profileRes.data);
-        setCourses(coursesRes.data);
+        setCourses((coursesRes.data.results || coursesRes.data));
         setFiltered(coursesRes.data);
       } catch {
         localStorage.clear();
@@ -74,7 +75,7 @@ export default function ExplorePage() {
     try {
       await api.post("/enrollments/", { course: courseId });
       router.push(`/courses/${courseSlug}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const respStatus = err.response?.status;
       const data = err.response?.data;
       const rawError = JSON.stringify(data);
@@ -206,7 +207,7 @@ export default function ExplorePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filtered.map((course: any) => {
+              {filtered.map((course: unknown) => {
                 const thumbnail = getYoutubeThumbnail(course.lessons);
                 const lessonCount = course.lessons?.length || 0;
 

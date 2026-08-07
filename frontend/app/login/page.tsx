@@ -49,7 +49,7 @@ export default function LoginPage() {
         router.push(profile.data.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
         err.response?.data?.detail ||
         err.response?.data?.non_field_errors?.[0] ||
@@ -132,7 +132,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-gray-400 mt-6">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
             Create one
           </Link>

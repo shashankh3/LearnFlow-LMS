@@ -11,6 +11,7 @@ export default function CreateCoursePage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [difficulty, setDifficulty] = useState("BEGINNER");
+  const [status, setStatus] = useState("draft");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -20,9 +21,9 @@ export default function CreateCoursePage() {
     setError("");
     
     try {
-      const res = await api.post("/courses/", { title, description, difficulty });
+      const res = await api.post("/courses/", { title, description, difficulty, status });
       router.push(`/instructor/courses/${res.data.slug}/lessons/create`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Defensively parse the exact error Django is returning
       let errorMsg = "Server error. Please try again.";
       if (err.response?.data) {
@@ -81,6 +82,17 @@ export default function CreateCoursePage() {
                 {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map(lvl => (
                   <button key={lvl} type="button" onClick={() => setDifficulty(lvl)} className={`py-4 rounded-2xl font-black text-xs border-2 transition-all ${difficulty === lvl ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400'}`}>
                     {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 block">Publish Status</label>
+              <div className="grid grid-cols-2 gap-4">
+                {['draft', 'published'].map(st => (
+                  <button key={st} type="button" onClick={() => setStatus(st)} className={`py-4 rounded-2xl font-black text-xs border-2 transition-all uppercase ${status === st ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400'}`}>
+                    {st}
                   </button>
                 ))}
               </div>

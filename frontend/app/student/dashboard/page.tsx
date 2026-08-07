@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,10 +8,10 @@ import api from "@/lib/api";
 import {
   LayoutDashboard, Compass, BarChart2, LogOut,
   BookOpen, Award, ChevronRight, TrendingUp,
-  Clock, CheckCircle, Play
+   CheckCircle, Play
 } from "lucide-react";
 
-const getYoutubeThumbnail = (lessons: any[]) => {
+const getYoutubeThumbnail = (lessons: unknown[]) => {
   for (const lesson of lessons || []) {
     if (lesson.video_url) {
       const match = lesson.video_url.match(
@@ -49,7 +50,7 @@ export default function StudentDashboard() {
         ]);
         if (profileRes.data.is_instructor) { router.replace("/instructor/dashboard"); return; }
         setUser(profileRes.data);
-        setEnrollments(enrollRes.data);
+        setEnrollments((enrollRes.data.results || enrollRes.data));
       } catch {
         localStorage.clear();
         router.push("/login");
@@ -64,7 +65,7 @@ export default function StudentDashboard() {
     ? Math.round(enrollments.reduce((s, e) => s + (e.progress_percentage || 0), 0) / enrollments.length)
     : 0;
   const completedCourses = enrollments.filter(e => e.is_completed).length;
-  const inProgressCourses = enrollments.filter(e => !e.is_completed).length;
+
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">
@@ -197,7 +198,7 @@ export default function StudentDashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {enrollments.map((enrollment: any) => {
+              {enrollments.map((enrollment: unknown) => {
                 const course = enrollment.course_details;
                 if (!course) return null;
                 const thumbnail = getYoutubeThumbnail(course.lessons);

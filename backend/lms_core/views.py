@@ -52,17 +52,41 @@ def get_user_data(request):
 # ==========================================
 
 class CourseViewSet(viewsets.ModelViewSet):
-    queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Course.objects.select_related('instructor').prefetch_related('lessons').all()
+        from django.db.models import Q
+        if user.is_authenticated and getattr(user, 'is_instructor', False):
+            qs = qs.filter(Q(status='published') | Q(instructor=user))
+        else:
+            qs = qs.filter(status='published')
+
+        search = self.request.query_params.get('search')
+        difficulty = self.request.query_params.get('difficulty')
+
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
+        if difficulty and difficulty != "All":
+            qs = qs.filter(difficulty__iexact=difficulty)
+
+        return qs.distinct()
 
     @action(detail=False, methods=['get'], url_path='explore')
     def explore(self, request):
         enrolled_ids = Enrollment.objects.filter(
             user=request.user
         ).values_list('course_id', flat=True)
-        courses = Course.objects.exclude(id__in=enrolled_ids)
+        courses = self.get_queryset().exclude(id__in=enrolled_ids)
+        
+        page = self.paginate_queryset(courses)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+            
         serializer = self.get_serializer(courses, many=True)
         return Response(serializer.data)
 
@@ -74,6 +98,12 @@ class CourseViewSet(viewsets.ModelViewSet):
         if course.instructor != request.user:
             return Response({"error": _("Only the course creator can delete this course.")}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        course = self.get_object()
+        if course.instructor != request.user:
+            return Response({"error": _("Only the course creator can edit this course.")}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
 
 
 class LessonViewSet(viewsets.ModelViewSet):
@@ -96,6 +126,11 @@ class LessonViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        course_obj = Course.objects.get(id=serializer.validated_data['course'].id)
+        if course_obj.instructor != request.user:
+            return Response({"error": _("Only the course creator can add lessons.")}, status=status.HTTP_403_FORBIDDEN)
+            
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -103,16 +138,36 @@ class LessonViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+    def update(self, request, *args, **kwargs):
+        lesson = self.get_object()
+        if lesson.course.instructor != request.user:
+            return Response({"error": _("Only the course creator can edit this lesson.")}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        lesson = self.get_object()
+        if lesson.course.instructor != request.user:
+            return Response({"error": _("Only the course creator can delete this lesson.")}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
 
 class EnrollmentViewSet(viewsets.ModelViewSet):
     serializer_class = EnrollmentSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Enrollment.objects.filter(user=self.request.user)
+        return Enrollment.objects.filter(user=self.request.user).select_related('course', 'course__instructor').prefetch_related('completed_lessons')
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        course_id = request.data.get('course')
+        if course_id:
+            enrollment, created = Enrollment.objects.get_or_create(user=request.user, course_id=course_id)
+            serializer = self.get_serializer(enrollment)
+            if created:
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return super().create(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         enrollment = self.get_object()
@@ -131,13 +186,17 @@ def get_instructor_analytics(request):
     if not getattr(request.user, 'is_instructor', False):
         return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
     
-    courses = Course.objects.filter(instructor=request.user)
+    courses = Course.objects.filter(instructor=request.user).prefetch_related(
+        'lessons',
+        'enrollments__user',
+        'enrollments__completed_lessons'
+    )
     analytics_data = []
     
     for course in courses:
-        enrollments = Enrollment.objects.filter(course=course)
-        total_students = enrollments.count()
-        completed_students = enrollments.filter(is_completed=True).count()
+        enrollments = course.enrollments.all()
+        total_students = len(enrollments)
+        completed_students = sum(1 for e in enrollments if e.is_completed)
         total_lessons = course.lessons.count()
         
         students_list = []
@@ -183,14 +242,18 @@ def mark_lesson_completed(request, course_slug, lesson_id):
         enrollment = Enrollment.objects.get(user=request.user, course=course)
 
         enrollment.completed_lessons.add(lesson)
+        enrollment.resume_lesson = lesson
 
         total = course.lessons.count()
         completed = enrollment.completed_lessons.count()
         progress = int((completed / total) * 100) if total > 0 else 0
 
-        if progress == 100:
+        if progress == 100 and not enrollment.is_completed:
+            from django.utils import timezone
             enrollment.is_completed = True
-            enrollment.save()
+            enrollment.completed_at = timezone.now()
+        
+        enrollment.save()
 
         return Response({
             "message": _("Lesson completed!"),
@@ -265,4 +328,49 @@ def approve_quiz(request, quiz_id):
         quiz.save()
         return Response({"message": "Quiz published successfully"})
     except Quiz.DoesNotExist:
-        return Response({"error": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_quiz(request, quiz_id):
+    from .models import Quiz, QuizAttempt, QuizAnswer, Choice
+    from django.utils import timezone
+    try:
+        quiz = Quiz.objects.get(id=quiz_id)
+    except Quiz.DoesNotExist:
+        return Response({"error": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    attempts = QuizAttempt.objects.filter(user=request.user, quiz=quiz).order_by('-started_at')
+    # Limit removed for demo purposes
+
+    attempt = QuizAttempt.objects.create(user=request.user, quiz=quiz, submitted_at=timezone.now())
+    answers_data = request.data.get('answers', {})
+    
+    score = 0
+    total = quiz.questions.count()
+    
+    for q in quiz.questions.all():
+        choice_id = answers_data.get(str(q.id))
+        if choice_id:
+            try:
+                choice = Choice.objects.get(id=choice_id, question=q)
+                QuizAnswer.objects.create(attempt=attempt, question=q, selected_choice=choice)
+                if choice.is_correct:
+                    score += 1
+            except Choice.DoesNotExist:
+                pass
+                
+    attempt.score = score
+    attempt.passed = (score / total) >= 0.7 if total > 0 else False
+    attempt.save()
+    
+    return Response({
+        "message": "Quiz submitted",
+        "score": score,
+        "total": total,
+        "passed": attempt.passed
+    })
+
+@api_view(['GET'])
+def health_check(request):
+    return Response({"status": "healthy", "service": "LearnFlow-API"})

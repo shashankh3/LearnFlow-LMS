@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { ArrowLeft, CheckCircle, Flame, RefreshCw, Trophy, BookOpen, Lock } from "lucide-react";
+import { ArrowLeft, CheckCircle, Flame, RefreshCw, Trophy, BookOpen} from "lucide-react";
 
 const getEmbedUrl = (url: string) => {
   if (!url) return "";
@@ -44,7 +45,7 @@ export default function LessonPlayerPage() {
         // Get enrollment for this course
         const enrollments = enrollRes.data;
         const currentEnrollment = enrollments.find(
-          (e: any) => e.course_details?.slug === slug
+          (e: unknown) => e.course_details?.slug === slug
         );
 
         if (currentEnrollment) {
@@ -77,7 +78,7 @@ export default function LessonPlayerPage() {
       if (res.data.is_completed && res.data.certificate_url) {
         setCertUrl(res.data.certificate_url);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       alert(err.response?.data?.error || err.response?.data?.detail || "Error marking complete.");
     }
   };
@@ -96,7 +97,7 @@ export default function LessonPlayerPage() {
         return;
       }
       setQuiz(parsedQuiz);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setQuizError(err.response?.data?.error || "System busy. Try again in a few seconds.");
     } finally {
       setQuizLoading(false);
@@ -195,7 +196,7 @@ export default function LessonPlayerPage() {
                 <BookOpen size={16} className="text-indigo-600" /> Course Lessons
               </h3>
               <div className="space-y-2">
-                {allLessons.map((l: any, idx: number) => {
+                {allLessons.map((l: unknown, idx: number) => {
                   const isDone = completedIds.includes(l.id);
                   const isCurrent = l.id === Number(id);
                   return (

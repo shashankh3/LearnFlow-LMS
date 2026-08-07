@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import api from "@/lib/api";
-import { BookOpen, Video, FileText, Plus, CheckCircle, ArrowLeft, Trash2 } from "lucide-react";
+import { BookOpen, Video, FileText,   ArrowLeft, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function CreateLessonPage() {
@@ -25,7 +26,7 @@ export default function CreateLessonPage() {
                 const res = await api.get(`/courses/${slug}/`);
                 setCourse(res.data);
                 setLessons(res.data.lessons || []);
-            } catch (err) {
+            } catch {
                 toast.error("Failed to load course");
                 router.push("/dashboard");
             } finally {

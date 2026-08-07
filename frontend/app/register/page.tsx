@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { GraduationCap, BookOpen, ArrowRight, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { GraduationCap, BookOpen,  Eye, EyeOff, AlertCircle } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -36,7 +36,7 @@ export default function RegisterPage() {
       if (response.status === 201 || response.status === 200) {
         router.push("/login?registered=true");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Full Backend Error Object:", err.response?.data);
       
       // Extracting the exact error message from Django

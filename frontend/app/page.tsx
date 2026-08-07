@@ -47,7 +47,7 @@ export default function Home() {
             </span>
           </h1>
           <p className="animate-fade-up-delay text-xl text-gray-500 max-w-2xl mx-auto mb-10">
-            The modern learning platform where AI generates quizzes instantly, instructors track every student's progress, and learning never stops.
+            The modern learning platform where AI generates quizzes instantly, instructors track every student&apos;s progress, and learning never stops.
           </p>
           <div className="animate-fade-up-delay-2 flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register" className="inline-flex items-center gap-2 bg-indigo-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-indigo-700 hover:scale-105 transition-all text-lg shadow-lg shadow-indigo-200">

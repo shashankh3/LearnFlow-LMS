@@ -12,6 +12,8 @@ from .views import (
     generate_quiz,
     approve_quiz,
     mark_lesson_completed,
+    submit_quiz,
+    health_check,
     CustomTokenObtainPairView
 )
 
@@ -21,6 +23,7 @@ router.register(r'lessons', LessonViewSet, basename='lesson')
 router.register(r'enrollments', EnrollmentViewSet, basename='enrollment')
 
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('', include(router.urls)),
     path('auth/register/', register_user, name='register'),
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='login'),
@@ -42,4 +45,5 @@ urlpatterns = [
     path('lessons/<int:lesson_id>/generate-quiz/', generate_quiz, name='generate_quiz'),
     path('lessons/<int:lesson_id>/quiz/', generate_quiz, name='generate_quiz_alias'),
     path('quizzes/<int:quiz_id>/approve/', approve_quiz, name='approve_quiz'),
+    path('quizzes/<int:quiz_id>/submit/', submit_quiz, name='submit_quiz'),
 ]

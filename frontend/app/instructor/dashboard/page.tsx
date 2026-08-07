@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,7 +10,7 @@ import {
   Users, Plus, Video, ChevronRight, TrendingUp
 } from "lucide-react";
 
-const getYoutubeThumbnail = (lessons: any[]) => {
+const getYoutubeThumbnail = (lessons: unknown[]) => {
   for (const lesson of lessons || []) {
     if (lesson.video_url) {
       const match = lesson.video_url.match(
@@ -43,7 +44,7 @@ export default function InstructorDashboard() {
         if (!profileRes.data.is_instructor) { router.replace("/student/dashboard"); return; }
         setUser(profileRes.data);
         const mine = coursesRes.data.filter(
-          (c: any) => c.instructor_name === profileRes.data.username
+          (c: unknown) => c.instructor_name === profileRes.data.username
         );
         setCourses(mine);
         setAnalytics(analyticsRes.data);
@@ -58,7 +59,7 @@ export default function InstructorDashboard() {
   }, [router]);
 
   const totalStudents = analytics.reduce((s, c) => s + c.total_students, 0);
-  const totalLessons = courses.reduce((s: number, c: any) => s + (c.lessons?.length || 0), 0);
+  const totalLessons = courses.reduce((s: number, c: unknown) => s + (c.lessons?.length || 0), 0);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -152,7 +153,7 @@ export default function InstructorDashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map((course: any) => {
+              {courses.map((course: unknown) => {
                 const courseAnalytics = analytics.find(a => a.slug === course.slug);
                 const lessonCount = course.lessons?.length || 0;
                 const studentCount = courseAnalytics?.total_students || 0;

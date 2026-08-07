@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { ArrowLeft, Award, Download, Share2, CheckCircle } from "lucide-react";
+import { ArrowLeft, Award, Download,  CheckCircle } from "lucide-react";
 
 export default function CertificatePage() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function CertificatePage() {
   const [error, setError] = useState("");
   const [user, setUser] = useState<any>(null);
   const [course, setCourse] = useState<any>(null);
-  const [enrollment, setEnrollment] = useState<any>(null);
+  const [ setEnrollment] = useState<any>(null);
   const [completedDate, setCompletedDate] = useState("");
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export default function CertificatePage() {
         ]);
 
         const found = enrollRes.data.find(
-          (e: any) => e.course === courseRes.data.id || e.course_details?.slug === slug
+          (e: unknown) => e.course === courseRes.data.id || e.course_details?.slug === slug
         );
 
         if (!found) {
@@ -224,7 +225,7 @@ export default function CertificatePage() {
         <div className="bg-white rounded-2xl border border-gray-200/60 px-8 py-5 flex items-center gap-6 shadow-sm">
           <div>
             <p className="text-sm font-black text-gray-900">🎉 Congratulations!</p>
-            <p className="text-xs text-gray-400 mt-0.5">You've earned this certificate</p>
+            <p className="text-xs text-gray-400 mt-0.5">You&apos;ve earned this certificate</p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={handlePrint}

@@ -52,7 +52,7 @@ export default function EditCoursePage() {
       setTimeout(() => {
         router.push(`/courses/${slug}`);
       }, 1000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
         err.response?.data?.title?.[0] ||
         err.response?.data?.detail ||
