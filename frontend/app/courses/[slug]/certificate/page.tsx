@@ -16,7 +16,7 @@ export default function CertificatePage() {
   const [error, setError] = useState("");
   const [user, setUser] = useState<any>(null);
   const [course, setCourse] = useState<any>(null);
-  const [ setEnrollment] = useState<any>(null);
+  const [enrollment, setEnrollment] = useState<any>(null);
   const [completedDate, setCompletedDate] = useState("");
 
   useEffect(() => {
