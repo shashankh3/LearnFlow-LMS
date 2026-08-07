@@ -43,7 +43,7 @@ export default function LessonPlayerPage() {
         setLesson(lessonData);
 
         // Get enrollment for this course
-        const enrollments = enrollRes.data;
+        const enrollments = enrollRes.data.results || enrollRes.data;
         const currentEnrollment = enrollments.find(
           (e: unknown) => e.course_details?.slug === slug
         );
