@@ -70,10 +70,11 @@ REQUIRED JSON SCHEMA (Error Fallback):
 VALID_OPTION_KEYS = {"A", "B", "C", "D"}
 
 
-def _strip_markdown_fences(text: str) -> str:
-    text = text.strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
-    text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
+def _extract_json(text: str) -> str:
+    start = text.find('{')
+    end = text.rfind('}')
+    if start != -1 and end != -1 and end > start:
+        return text[start:end+1]
     return text.strip()
 
 
@@ -144,7 +145,7 @@ def generate_quiz_from_lesson(lesson_content: str) -> GeneratedQuiz:
     except Exception as exc:
         raise QuizGenerationError(f"Fireworks response has no text.") from exc
         
-    cleaned = _strip_markdown_fences(response_text)
+    cleaned = _extract_json(response_text)
     try:
         parsed_dict = json.loads(cleaned)
     except json.JSONDecodeError as exc:
