@@ -70,12 +70,23 @@ REQUIRED JSON SCHEMA (Error Fallback):
 VALID_OPTION_KEYS = {"A", "B", "C", "D"}
 
 
+def _strip_markdown_fences(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = re.sub(r'^```(?:json)?\s*', '', text.strip(), flags=re.MULTILINE)
+    cleaned = re.sub(r'```\s*$', '', cleaned.strip(), flags=re.MULTILINE)
+    return cleaned.strip()
+
+
 def _extract_json(text: str) -> str:
-    start = text.find('{')
-    end = text.rfind('}')
+    if not text:
+        return ""
+    stripped = _strip_markdown_fences(text)
+    start = stripped.find('{')
+    end = stripped.rfind('}')
     if start != -1 and end != -1 and end > start:
-        return text[start:end+1]
-    return text.strip()
+        return stripped[start:end+1]
+    return stripped
 
 
 def _validate_and_parse(raw_dict: dict) -> GeneratedQuiz:
@@ -126,26 +137,56 @@ def generate_quiz_from_lesson(lesson_content: str) -> GeneratedQuiz:
     logger.info("Calling Fireworks API. Content length: %d chars.", len(lesson_content))
     
     try:
-        response = client.chat.completions.create(
-            model="accounts/fireworks/models/glm-5p3-flash",
-            messages=[
-                {"role": "system", "content": QUIZ_GENERATION_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.4,
-            top_p=0.95,
-            max_tokens=2048,
-        )
+        try:
+            response = client.chat.completions.create(
+                model="accounts/fireworks/models/glm-5p3-flash",
+                messages=[
+                    {"role": "system", "content": QUIZ_GENERATION_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                top_p=0.95,
+                max_tokens=4096,
+                extra_body={"reasoning_effort": "low"}
+            )
+        except Exception as retry_exc:
+            logger.warning("Call with reasoning_effort failed (%s), falling back to standard create.", retry_exc)
+            response = client.chat.completions.create(
+                model="accounts/fireworks/models/glm-5p3-flash",
+                messages=[
+                    {"role": "system", "content": QUIZ_GENERATION_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                top_p=0.95,
+                max_tokens=4096,
+            )
     except Exception as exc:
         raise QuizGenerationError(f"Fireworks API call failed: {type(exc).__name__}: {exc}") from exc
         
     try:
-        response_text = response.choices[0].message.content
+        choice = response.choices[0]
+        message = choice.message
+        response_text = (getattr(message, "content", "") or "").strip()
+        # Fallback to reasoning_content if content is empty (e.g. reasoning model)
+        if not response_text and getattr(message, "reasoning_content", None):
+            response_text = (message.reasoning_content or "").strip()
     except Exception as exc:
-        raise QuizGenerationError(f"Fireworks response has no text.") from exc
+        raise QuizGenerationError(f"Fireworks response has no message content: {exc}") from exc
         
+    if not response_text:
+        finish_reason = getattr(choice, "finish_reason", "unknown")
+        raise QuizGenerationError(
+            f"Fireworks returned empty content (finish_reason: '{finish_reason}'). "
+            "The model may have exhausted token limits during reasoning. Please try again."
+        )
+
     cleaned = _extract_json(response_text)
+    if not cleaned:
+        raise QuizGenerationError(f"Fireworks response contained no valid JSON. Snippet: {response_text[:200]}")
+
     try:
         parsed_dict = json.loads(cleaned)
     except json.JSONDecodeError as exc:

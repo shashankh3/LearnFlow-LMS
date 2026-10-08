@@ -43,12 +43,22 @@ export default function ExplorePage() {
           api.get("/auth/me/"),
           api.get("/courses/explore/")
         ]);
+        const rawCourses = coursesRes.data;
+        const list = Array.isArray(rawCourses?.results)
+          ? rawCourses.results
+          : Array.isArray(rawCourses)
+          ? rawCourses
+          : [];
         setUser(profileRes.data);
-        setCourses((coursesRes.data.results || coursesRes.data));
-        setFiltered(coursesRes.data);
-      } catch {
-        localStorage.clear();
-        router.push("/login");
+        setCourses(list);
+        setFiltered(list);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          router.push("/login");
+        } else {
+          console.error("Failed to load explore courses:", err);
+        }
       } finally {
         setLoading(false);
       }
@@ -57,15 +67,15 @@ export default function ExplorePage() {
   }, [router]);
 
   useEffect(() => {
-    let result = courses;
+    let result = Array.isArray(courses) ? courses : [];
     if (search.trim()) {
       result = result.filter(c =>
-        c.title.toLowerCase().includes(search.toLowerCase()) ||
-        c.instructor_name?.toLowerCase().includes(search.toLowerCase())
+        c?.title?.toLowerCase().includes(search.toLowerCase()) ||
+        c?.instructor_name?.toLowerCase().includes(search.toLowerCase())
       );
     }
     if (difficulty !== "All") {
-      result = result.filter(c => c.difficulty === difficulty);
+      result = result.filter(c => c?.difficulty === difficulty);
     }
     setFiltered(result);
   }, [search, difficulty, courses]);
