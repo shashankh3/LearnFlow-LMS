@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://your-backend.pythonanywhere.com/api",
+  baseURL: (process.env.NEXT_PUBLIC_API_URL || "https://shashankh3.pythonanywhere.com/api").replace(/\/+$/, ""),
   headers: { "Content-Type": "application/json" },
 });
 

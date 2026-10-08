@@ -6,7 +6,7 @@ import Link from "next/link";
 import axios from "axios";
 import { Eye, EyeOff, Loader2, BookOpen } from "lucide-react";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "https://shashankh3.pythonanywhere.com/api").replace(/\/+$/, "");
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,12 +49,16 @@ export default function LoginPage() {
         router.push(profile.data.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
       }
 
-    } catch (err: unknown) {
-      setError(
-        err.response?.data?.detail ||
-        err.response?.data?.non_field_errors?.[0] ||
-        "Incorrect username or password."
-      );
+    } catch (err: any) {
+      if (!err.response) {
+        setError("Unable to connect to the backend server. Please verify your connection.");
+      } else {
+        setError(
+          err.response?.data?.detail ||
+          err.response?.data?.non_field_errors?.[0] ||
+          "Incorrect username or password."
+        );
+      }
     } finally {
       setLoading(false);
     }
