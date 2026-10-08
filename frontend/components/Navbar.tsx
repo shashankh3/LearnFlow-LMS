@@ -28,10 +28,10 @@ export default function Navbar() {
     // Return a skeleton or plain logo version during server-side rendering
     return (
       <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
+        <Link href="/" className="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:opacity-90 transition-opacity">
           <BookOpen size={24} />
           <span>LearnFlow</span>
-        </div>
+        </Link>
       </nav>
     );
   }

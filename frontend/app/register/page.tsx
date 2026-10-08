@@ -56,10 +56,10 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center mb-4">
+        <Link href="/" className="flex items-center justify-center mb-4 hover:opacity-90 transition-opacity">
           <BookOpen className="h-10 w-10 text-indigo-600" />
           <span className="ml-2 text-3xl font-bold text-slate-900">LearnFlow</span>
-        </div>
+        </Link>
         <h2 className="text-center text-3xl font-extrabold text-slate-900">Create your account</h2>
         <p className="mt-2 text-center text-sm text-slate-600">Join thousands of learners today</p>
       </div>

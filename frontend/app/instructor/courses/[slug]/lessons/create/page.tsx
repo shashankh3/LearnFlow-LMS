@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import api from "@/lib/api";
 import { BookOpen, Video, FileText,   ArrowLeft, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -78,9 +79,15 @@ export default function CreateLessonPage() {
     return (
         <div className="min-h-screen bg-[#F8F9FB] flex flex-col">
             <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-30">
-                <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold transition-colors">
-                    <ArrowLeft className="h-4 w-4" /> BACK TO COURSE
-                </button>
+                <div className="flex items-center gap-4">
+                    <Link href="/" className="text-sm font-black text-indigo-600 tracking-wider hover:opacity-80 transition-opacity">
+                        LEARNFLOW
+                    </Link>
+                    <span className="text-slate-300">|</span>
+                    <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold transition-colors">
+                        <ArrowLeft className="h-4 w-4" /> BACK TO COURSE
+                    </button>
+                </div>
                 <div className="flex items-center gap-2">
                     <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-xs">
                         {course?.title[0]}

@@ -138,12 +138,12 @@ export default function CertificatePage() {
             />
 
             {/* Logo / Brand */}
-            <div className="flex items-center justify-center gap-2 mb-10">
+            <Link href="/" className="flex items-center justify-center gap-2 mb-10 hover:opacity-90 transition-opacity">
               <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
                 <Award size={20} className="text-white" />
               </div>
               <span className="text-2xl font-black text-indigo-600 tracking-tight">LEARNFLOW</span>
-            </div>
+            </Link>
 
             {/* Header text */}
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-4">
@@ -202,7 +202,9 @@ export default function CertificatePage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Platform</p>
-                <p className="text-sm font-black text-gray-800">LearnFlow</p>
+                <p className="text-sm font-black text-gray-800">
+                  <Link href="/" className="hover:text-indigo-600 transition-colors">LearnFlow</Link>
+                </p>
               </div>
             </div>
 

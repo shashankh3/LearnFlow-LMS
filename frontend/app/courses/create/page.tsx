@@ -38,10 +38,15 @@ export default function CreateCoursePage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="w-full max-w-lg">
-        <Link href="/instructor/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 font-medium mb-8 transition-colors">
-          <ArrowLeft size={16} /> Back to Dashboard
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/instructor/dashboard"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 font-medium transition-colors">
+            <ArrowLeft size={16} /> Back to Dashboard
+          </Link>
+          <Link href="/" className="text-sm font-black text-indigo-600 tracking-wider hover:opacity-80 transition-opacity">
+            LEARNFLOW
+          </Link>
+        </div>
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-100/50 p-8">
           {/* Header */}

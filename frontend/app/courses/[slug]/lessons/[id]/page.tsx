@@ -130,8 +130,12 @@ export default function LessonPlayerPage() {
     <div className="min-h-screen bg-[#F8F9FB] flex flex-col">
       {/* Header */}
       <header className="bg-slate-900 text-white px-8 py-4 flex items-center justify-between sticky top-0 z-20 shadow-xl">
-        <div className="flex items-center gap-4">
-          <Link href={`/courses/${slug}`} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="text-sm font-black text-indigo-400 tracking-wider hover:text-indigo-300 transition-colors uppercase">
+            LEARNFLOW
+          </Link>
+          <span className="text-slate-700">|</span>
+          <Link href={`/courses/${slug}`} className="p-2 hover:bg-slate-800 rounded-full transition-colors" title="Back to course">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>

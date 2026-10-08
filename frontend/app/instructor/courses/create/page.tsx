@@ -51,9 +51,14 @@ export default function CreateCoursePage() {
   return (
     <div className="min-h-screen bg-[#F8F9FB] p-8 lg:p-12">
       <div className="max-w-3xl mx-auto">
-        <Link href="/dashboard" className="inline-flex items-center text-slate-500 font-bold text-sm mb-8 hover:text-indigo-600">
-          <ArrowLeft className="h-4 w-4 mr-2" /> BACK TO DASHBOARD
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/dashboard" className="inline-flex items-center text-slate-500 font-bold text-sm hover:text-indigo-600">
+            <ArrowLeft className="h-4 w-4 mr-2" /> BACK TO DASHBOARD
+          </Link>
+          <Link href="/" className="text-sm font-black text-indigo-600 tracking-wider hover:opacity-80 transition-opacity">
+            LEARNFLOW
+          </Link>
+        </div>
 
         <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-slate-200/50 p-10 lg:p-16">
           <h1 className="text-4xl font-black text-slate-900 italic tracking-tighter mb-2 uppercase">Create Course</h1>

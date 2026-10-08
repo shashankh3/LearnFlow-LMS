@@ -7,10 +7,10 @@ export default function Home() {
 
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-2 text-indigo-600 font-bold text-xl">
+        <Link href="/" className="flex items-center gap-2 text-indigo-600 font-bold text-xl hover:opacity-90 transition-opacity">
           <BookOpen size={24} />
           <span>LearnFlow</span>
-        </div>
+        </Link>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
           <a href="#features" className="hover:text-indigo-600 transition">Features</a>
           <a href="#stats" className="hover:text-indigo-600 transition">Why Us</a>
@@ -42,9 +42,9 @@ export default function Home() {
           </div>
           <h1 className="animate-fade-up text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
             Learn Smarter with <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+            <Link href="/" className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 transition-opacity inline-block">
               LearnFlow LMS
-            </span>
+            </Link>
           </h1>
           <p className="animate-fade-up-delay text-xl text-gray-500 max-w-2xl mx-auto mb-10">
             The modern learning platform where AI generates quizzes instantly, instructors track every student&apos;s progress, and learning never stops.
@@ -114,7 +114,7 @@ export default function Home() {
         <div className="absolute bottom-0 right-[10%] w-96 h-96 bg-purple-300 rounded-full opacity-10 animate-float-medium" />
         <div className="relative">
           <h2 className="text-4xl font-bold mb-4">Ready to start learning?</h2>
-          <p className="text-indigo-200 mb-8 text-lg">Join LearnFlow today — it is completely free.</p>
+          <p className="text-indigo-200 mb-8 text-lg">Join <Link href="/" className="underline hover:text-white transition-colors">LearnFlow</Link> today — it is completely free.</p>
           <Link href="/register" className="inline-flex items-center gap-2 bg-white text-indigo-600 font-bold px-8 py-4 rounded-xl hover:bg-indigo-50 hover:scale-105 transition-all text-lg shadow-xl">
             Create Free Account <ArrowRight size={20} />
           </Link>
@@ -123,7 +123,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-8 px-4 text-center text-sm">
-        <p>© 2025 LearnFlow LMS — Built with Django + Next.js + DeepSeek AI</p>
+        <p>© 2025 <Link href="/" className="hover:text-white transition-colors underline">LearnFlow</Link> LMS — Built with Django + Next.js + Fireworks AI</p>
       </footer>
 
     </div>

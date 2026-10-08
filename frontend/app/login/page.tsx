@@ -69,12 +69,12 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
 
         {/* Brand */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
+        <Link href="/" className="flex items-center justify-center gap-2.5 mb-8 hover:opacity-90 transition-opacity">
           <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
             <BookOpen size={20} className="text-white" />
           </div>
           <span className="text-2xl font-black text-indigo-600 tracking-tight">LEARNFLOW</span>
-        </div>
+        </Link>
 
         {/* Card */}
         <div className="bg-white rounded-3xl border border-gray-200/60 shadow-xl shadow-gray-200/40 p-8">

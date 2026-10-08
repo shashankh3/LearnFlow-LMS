@@ -62,7 +62,9 @@ export default function StudentAnalyticsPage() {
       {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-gray-100 flex flex-col fixed top-0 left-0 h-screen z-30">
         <div className="px-6 py-5 border-b border-gray-100">
-          <span className="text-xl font-black text-indigo-600 tracking-tight">LEARNFLOW</span>
+          <Link href="/" className="text-xl font-black text-indigo-600 tracking-tight hover:opacity-80 transition-opacity block">
+            LEARNFLOW
+          </Link>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           <div className="px-3 py-2 mb-2">

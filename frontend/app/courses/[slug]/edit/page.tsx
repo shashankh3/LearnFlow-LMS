@@ -72,11 +72,16 @@ export default function EditCoursePage() {
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-6">
       <div className="w-full max-w-lg">
-        <Link href={`/courses/${slug}`}
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 font-semibold mb-8 transition-colors group">
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-          Back to Course
-        </Link>
+        <div className="flex items-center justify-between mb-8">
+          <Link href={`/courses/${slug}`}
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 font-semibold transition-colors group">
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+            Back to Course
+          </Link>
+          <Link href="/" className="text-sm font-black text-indigo-600 tracking-wider hover:opacity-80 transition-opacity">
+            LEARNFLOW
+          </Link>
+        </div>
 
         <div className="bg-white rounded-3xl border border-gray-200/60 shadow-xl shadow-gray-200/40 p-8">
           {/* Header */}

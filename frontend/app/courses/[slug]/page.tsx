@@ -201,13 +201,19 @@ export default function CourseDetailPage() {
       {/* ── Top Nav ── */}
       <div className="bg-white border-b border-gray-200/60 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link
-            href={isInstructor ? "/instructor/dashboard" : "/student/dashboard"}
-            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-semibold transition-colors group"
-          >
-            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-            Dashboard
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-lg font-black text-indigo-600 tracking-tight hover:opacity-80 transition-opacity">
+              LEARNFLOW
+            </Link>
+            <span className="text-gray-200">|</span>
+            <Link
+              href={isInstructor ? "/instructor/dashboard" : "/student/dashboard"}
+              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-semibold transition-colors group"
+            >
+              <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+              Dashboard
+            </Link>
+          </div>
 
           {!isInstructor && enrollment && (
             <div className="flex items-center gap-3">
