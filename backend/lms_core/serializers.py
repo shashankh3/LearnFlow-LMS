@@ -52,6 +52,8 @@ class CourseSerializer(serializers.ModelSerializer):
     # NEW: Automated thumbnail handler
     thumbnail = serializers.SerializerMethodField()
 
+    slug = serializers.SlugField(required=False)
+
     class Meta:
         model = Course
         fields = [
@@ -59,7 +61,22 @@ class CourseSerializer(serializers.ModelSerializer):
             'instructor_name', 'difficulty', 'lessons', 
             'instructor', 'thumbnail', 'progress_percentage'
         ]
-        extra_kwargs = {'instructor': {'read_only': True}}
+        extra_kwargs = {
+            'instructor': {'read_only': True},
+            'slug': {'required': False},
+        }
+
+    def create(self, validated_data):
+        if not validated_data.get('slug'):
+            from django.utils.text import slugify
+            base_slug = slugify(validated_data.get('title', '')) or 'course'
+            slug = base_slug
+            counter = 1
+            while Course.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            validated_data['slug'] = slug
+        return super().create(validated_data)
         
     def get_thumbnail(self, obj):
         if obj.thumbnail:

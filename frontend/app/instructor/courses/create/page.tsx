@@ -17,13 +17,29 @@ export default function CreateCoursePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim()) { setError("Title is required."); return; }
     setLoading(true);
     setError("");
+
+    const generatedSlug = (
+      title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "course"
+    ) + "-" + Math.random().toString(36).substring(2, 6);
     
     try {
-      const res = await api.post("/courses/", { title, description, difficulty, status });
+      const res = await api.post("/courses/", { 
+        title, 
+        slug: generatedSlug, 
+        description, 
+        difficulty, 
+        status 
+      });
       router.push(`/instructor/courses/${res.data.slug}/lessons/create`);
-    } catch (err: unknown) {
+    } catch (err: any) {
       // Defensively parse the exact error Django is returning
       let errorMsg = "Server error. Please try again.";
       if (err.response?.data) {
@@ -34,7 +50,6 @@ export default function CreateCoursePage() {
         } else {
           const keys = Object.keys(err.response.data);
           if (keys.length > 0) {
-            // E.g., translates {"title": ["This field must be unique."]} to "title: This field must be unique."
             const firstErrorValue = Array.isArray(err.response.data[keys[0]]) 
               ? err.response.data[keys[0]][0] 
               : err.response.data[keys[0]];

@@ -21,15 +21,31 @@ export default function CreateCoursePage() {
     if (!form.title.trim()) { setError("Title is required."); return; }
     setLoading(true);
     setError("");
+    const generatedSlug = (
+      form.title
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "course"
+    ) + "-" + Math.random().toString(36).substring(2, 6);
+
     try {
-      const res = await api.post("/courses/", form);
+      const res = await api.post("/courses/", {
+        ...form,
+        slug: generatedSlug,
+        status: "published",
+      });
       router.push(`/courses/${res.data.slug}`);
-    } catch (err: unknown) {
-      setError(
-        err.response?.data?.title?.[0] ||
-        err.response?.data?.detail ||
-        "Failed to create course."
-      );
+    } catch (err: any) {
+      const data = err.response?.data;
+      const errorMsg =
+        data?.slug?.[0] ||
+        data?.title?.[0] ||
+        data?.detail ||
+        (typeof data === "object" ? Object.values(data).flat().join(" ") : null) ||
+        "Failed to create course.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
