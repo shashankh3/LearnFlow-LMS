@@ -31,7 +31,7 @@ LearnFlow is a modern LMS built to bridge the gap between video learning and act
 
 - **Frontend:** Next.js 14, Tailwind CSS, Lucide Icons, Axios, React Hot Toast.
 - **Backend:** Django, Django REST Framework (DRF), SimpleJWT (Auth), Celery.
-- **AI Integration:** Fireworks AI (DeepSeek V4 Flash).
+- **AI Integration:** Fireworks AI (GLM-5.3 Flash).
 - **Database:** SQLite (Development).
 
 ---
