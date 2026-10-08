@@ -31,22 +31,24 @@ export default function LoginPage() {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      const { access, refresh } = res.data;
+      const { access, refresh, user } = res.data;
       if (!access) { setError("Invalid response. Please try again."); return; }
 
       localStorage.setItem("access", access);
       if (refresh) localStorage.setItem("refresh", refresh);
 
-      // Decode JWT payload to get role
-      try {
-        const payload = JSON.parse(atob(access.split(".")[1]));
-        router.push(payload.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
-      } catch {
-        // Fallback — fetch profile
-        const profile = await axios.get(`${BASE_URL}/auth/me/`, {
-          headers: { Authorization: `Bearer ${access}` }
-        });
-        router.push(profile.data.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
+      // Check role directly from login response or fallback to profile
+      if (user && typeof user.is_instructor === "boolean") {
+        router.push(user.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
+      } else {
+        try {
+          const profile = await axios.get(`${BASE_URL}/auth/me/`, {
+            headers: { Authorization: `Bearer ${access}` }
+          });
+          router.push(profile.data.is_instructor ? "/instructor/dashboard" : "/student/dashboard");
+        } catch {
+          router.push("/student/dashboard");
+        }
       }
 
     } catch (err: any) {

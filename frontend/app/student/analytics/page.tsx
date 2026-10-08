@@ -27,11 +27,21 @@ export default function StudentAnalyticsPage() {
           api.get("/auth/me/"),
           api.get("/enrollments/")
         ]);
+        const rawEnroll = enrollRes.data;
+        const enrollList = Array.isArray(rawEnroll?.results)
+          ? rawEnroll.results
+          : Array.isArray(rawEnroll)
+          ? rawEnroll
+          : [];
         setUser(profileRes.data);
-        setEnrollments((enrollRes.data.results || enrollRes.data));
-      } catch {
-        localStorage.clear();
-        router.push("/login");
+        setEnrollments(enrollList);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          router.push("/login");
+        } else {
+          console.error("Failed to load student analytics:", err);
+        }
       } finally {
         setLoading(false);
       }

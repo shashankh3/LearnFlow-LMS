@@ -50,10 +50,20 @@ export default function StudentDashboard() {
         ]);
         if (profileRes.data.is_instructor) { router.replace("/instructor/dashboard"); return; }
         setUser(profileRes.data);
-        setEnrollments((enrollRes.data.results || enrollRes.data));
-      } catch {
-        localStorage.clear();
-        router.push("/login");
+        const rawEnroll = enrollRes.data;
+        const enrollList = Array.isArray(rawEnroll?.results)
+          ? rawEnroll.results
+          : Array.isArray(rawEnroll)
+          ? rawEnroll
+          : [];
+        setEnrollments(enrollList);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          router.push("/login");
+        } else {
+          console.error("Failed to load student dashboard:", err);
+        }
       } finally {
         setLoading(false);
       }

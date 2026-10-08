@@ -43,14 +43,33 @@ export default function InstructorDashboard() {
         ]);
         if (!profileRes.data.is_instructor) { router.replace("/student/dashboard"); return; }
         setUser(profileRes.data);
-        const mine = coursesRes.data.filter(
-          (c: unknown) => c.instructor_name === profileRes.data.username
+        
+        const rawCourses = coursesRes.data;
+        const courseList = Array.isArray(rawCourses?.results)
+          ? rawCourses.results
+          : Array.isArray(rawCourses)
+          ? rawCourses
+          : [];
+        
+        const mine = courseList.filter(
+          (c: any) => c.instructor_name === profileRes.data.username
         );
         setCourses(mine);
-        setAnalytics(analyticsRes.data);
-      } catch {
-        localStorage.clear();
-        router.push("/login");
+
+        const rawAnalytics = analyticsRes.data;
+        const analyticsList = Array.isArray(rawAnalytics)
+          ? rawAnalytics
+          : Array.isArray(rawAnalytics?.results)
+          ? rawAnalytics.results
+          : [];
+        setAnalytics(analyticsList);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          router.push("/login");
+        } else {
+          console.error("Failed to load instructor dashboard:", err);
+        }
       } finally {
         setLoading(false);
       }

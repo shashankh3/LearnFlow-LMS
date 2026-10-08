@@ -28,13 +28,23 @@ export default function InstructorAnalyticsPage() {
           api.get("/auth/me/"),
           api.get("/instructor/analytics/")
         ]);
+        const rawAnalytics = analyticsRes.data;
+        const analyticsList = Array.isArray(rawAnalytics)
+          ? rawAnalytics
+          : Array.isArray(rawAnalytics?.results)
+          ? rawAnalytics.results
+          : [];
         setUser(profileRes.data);
-        setAnalytics(analyticsRes.data);
+        setAnalytics(analyticsList);
         // Auto-expand first course
-        if (analyticsRes.data.length > 0) setExpandedCourse(analyticsRes.data[0].id);
-      } catch {
-        localStorage.clear();
-        router.push("/login");
+        if (analyticsList.length > 0) setExpandedCourse(analyticsList[0].id);
+      } catch (err: any) {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          router.push("/login");
+        } else {
+          console.error("Failed to load instructor analytics:", err);
+        }
       } finally {
         setLoading(false);
       }
